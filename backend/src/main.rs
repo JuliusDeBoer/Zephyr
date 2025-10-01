@@ -1,16 +1,11 @@
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-use http_body_util::Full;
-use hyper::body::Bytes;
-use hyper::header::{CONTENT_TYPE, HeaderValue};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
-
-use crate::icalendar::{ICalendarFreeBusyType, ICalendarObject, ICalendarUserType};
 
 mod icalendar;
 
@@ -29,41 +24,9 @@ struct CalendarObjectResource {
     pub object_type: CalendarObjectResourceType,
 }
 
-async fn hello(
-    req: Request<hyper::body::Incoming>,
-) -> Result<Response<ICalendarObject>, Infallible> {
+async fn hello(req: Request<hyper::body::Incoming>) -> Result<Response<String>, Infallible> {
     dbg!(req.method());
-    let out = ICalendarObject {
-        alt_rep: String::new(),
-        cn: "Cool name!".into(),
-        cu_type: ICalendarUserType::Individual,
-        del_from: String::new(),
-        del_to: String::new(),
-        dir: String::new(),
-        encoding: icalendar::ICalendarEncodingType::BaseSixtyFour,
-        fmt_type: String::new(),
-        fb_type: ICalendarFreeBusyType::BusyUnavailable,
-        language: String::new(),
-        member: String::new(),
-        part_stat: String::new(),
-        range: 0,
-        trig_rel: 0,
-        rel_type: 0,
-        role: 0,
-        rsvp: false,
-        sent_by_: 0,
-        tzid: 0,
-        value_type: 0,
-        other: 0,
-    };
-
-    let mut response = Response::new(out);
-    // TODO(Julius): Figure out how to not have to set the content type every
-    //               time.
-    response
-        .headers_mut()
-        .insert(CONTENT_TYPE, HeaderValue::from_static("text/calendar"));
-    Ok(response)
+    Ok(Response::new("Heya".into()))
 }
 
 #[tokio::main]

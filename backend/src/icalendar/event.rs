@@ -130,12 +130,12 @@ mod test {
     use pretty_assertions::assert_eq;
     use std::str::FromStr;
 
-    #[allow(unused)]
     use super::*;
+
     /// Attempts to parse an [Event] to a String. This *might* fail even when
     /// the result is valid. Since the order of the properties does not matter.
     #[test]
-    fn serialize_event() {
+    fn serialize_full_event() {
         let event = Event {
             uid: Uuid::from_str("5aa5c392-fd79-4d24-adc9-8349c49b0b71").unwrap(),
             timestamp: DateTime::from_timestamp_secs(836481600).unwrap(),
@@ -157,6 +157,22 @@ mod test {
         STATUS:CONFIRMED\r\n\
         CATEGORIES:CONFERENCE\r\n\
         SUMMARY:Networld+Interop Conference\r\n\
+        END:VEVENT";
+
+        assert_eq!(event.to_string(), expected_result);
+    }
+
+    #[test]
+    fn serialize_minimal_event() {
+        let event = Event {
+            uid: Uuid::from_str("014145f2-adf7-49c4-bd42-bf34074f596d").unwrap(),
+            timestamp: DateTime::from_timestamp_secs(836553600).unwrap(),
+            ..Default::default()
+        };
+
+        let expected_result = "BEGIN:VEVENT\r\n\
+        DTSTAMP:19960705T080000Z\r\n\
+        UID:014145f2-adf7-49c4-bd42-bf34074f596d\r\n\
         END:VEVENT";
 
         assert_eq!(event.to_string(), expected_result);

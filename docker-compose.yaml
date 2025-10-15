@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build: ./frontend
+    networks:
+      - proxy
+  backend:
+    build: ./backend
+    networks:
+      - proxy
+      - db
+  db:
+    image: "postgres:latest"
+    networks:
+      - db
+  proxy:
+    image: "nginx:latest"
+    ports:
+      - 80:3000
+    networks:
+      - proxy
+
+networks:
+  proxy:
+  db:

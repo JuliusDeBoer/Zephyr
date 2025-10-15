@@ -22,8 +22,6 @@ where
     }
 }
 
-// NOTE(Julius): This type does not support `x-name` and `iana-token` like
-//               described in RFC 5545 3.2.3
 pub enum UserType {
     Individual,
     Group,
@@ -37,8 +35,6 @@ pub enum EncodingType {
     BaseSixtyFour,
 }
 
-// NOTE(Julius): This type does not support `x-name` and `iana-token` like
-//               described in RFC 5545 3.2.9
 pub enum FreeBusyType {
     Free,
     Busy,

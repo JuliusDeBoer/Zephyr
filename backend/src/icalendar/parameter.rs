@@ -100,7 +100,7 @@ impl<T> IcalParam<T> {
             sent_by: Default::default(),
             tz_id: Default::default(),
             value_type: Default::default(),
-            value: value,
+            value,
         }
     }
 }

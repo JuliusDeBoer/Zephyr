@@ -185,4 +185,20 @@ mod test {
 
         assert_eq!(todo.to_string(), expected_result);
     }
+
+    #[test]
+    fn serialize_minimal_todo() {
+        let todo = Todo {
+            uid: Uuid::from_str("8aa4dcb5-c32f-4e87-8ea8-2b89138df501").unwrap(),
+            timestamp: DateTime::from_timestamp_secs(886175100).unwrap(),
+            ..Default::default()
+        };
+
+        let expected_result = "BEGIN:VTODO\r\n\
+        UID:8aa4dcb5-c32f-4e87-8ea8-2b89138df501\r\n\
+        DTSTAMP:19980130T154500Z\r\n\
+        END:VTODO";
+
+        assert_eq!(todo.to_string(), expected_result);
+    }
 }

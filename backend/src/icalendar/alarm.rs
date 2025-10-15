@@ -3,8 +3,7 @@ use std::fmt::Display;
 use chrono::{DateTime, Utc};
 
 use crate::icalendar::{
-    ToIcalendarTimeStamp, if_some_write, if_some_write_date, if_some_write_param,
-    parameter::IcalParam,
+    ToIcalendarTimeStamp, if_some_write, if_some_write_param, parameter::IcalParam,
 };
 
 pub struct AudioAlarm {

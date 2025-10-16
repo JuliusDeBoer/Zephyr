@@ -20,6 +20,7 @@
         buildInputs = with pkgs; [
           jdk
           diesel-cli
+          postgresql
         ];
       };
     };

@@ -2,23 +2,23 @@ services:
   frontend:
     build: ./frontend
     networks:
-      - proxy
+      - backend
   backend:
     build: ./backend
     networks:
-      - proxy
+      - backend
       - db
   db:
     image: "postgres:latest"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=db
+    ports:
+      - "5432:5432"
     networks:
       - db
-  proxy:
-    image: "nginx:latest"
-    ports:
-      - 80:3000
-    networks:
-      - proxy
 
 networks:
-  proxy:
+  backend:
   db:

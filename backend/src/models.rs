@@ -14,3 +14,12 @@ pub struct User {
     pub affix: Option<String>,
     pub last_name: String,
 }
+
+// NOTE(Julius): This name will be annoying. Just you wait.
+#[derive(Queryable, Selectable, Insertable)]
+#[diesel(table_name = crate::schema::settings)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Setting {
+    pub key: String,
+    pub value: String,
+}

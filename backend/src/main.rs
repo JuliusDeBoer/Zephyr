@@ -2,19 +2,31 @@ use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use anyhow::Context;
 use argon2::Argon2;
+use argon2::PasswordHash;
 use argon2::PasswordHasher;
+use argon2::PasswordVerifier;
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use diesel::Connection;
+use diesel::ExpressionMethods;
 use diesel::PgConnection;
+use diesel::QueryDsl;
 use diesel::RunQueryDsl;
+use diesel::SelectableHelper;
 use dotenvy::dotenv;
+use hmac::{Hmac, Mac};
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use jwt::SignWithKey;
+use rand::rng;
+use rand::{Rng, distr::Alphanumeric};
+use sha2::Sha256;
+use std::collections::BTreeMap;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
@@ -28,6 +40,7 @@ mod models;
 mod schema;
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct SignUpBody {
     email: String,
     password: String,
@@ -36,7 +49,43 @@ struct SignUpBody {
     last_name: String,
 }
 
-async fn sign_up(state: Arc<AppState>, body: SignUpBody) -> Result<(), hyper::Error> {
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct LoginBody {
+    email: String,
+    password: String,
+}
+
+async fn login(state: Arc<AppState>, body: LoginBody) -> anyhow::Result<String> {
+    use crate::schema::users::dsl::*;
+
+    let mut db = state.db.lock().await;
+    let user = users
+        .select(crate::models::User::as_select())
+        .filter(email.eq(body.email))
+        .limit(1)
+        .load(&mut *db)
+        .context("Could not get user from database")?;
+
+    assert!(user.len() <= 1);
+    if user.is_empty() {
+        return Err(anyhow::format_err!("Invalid email or password"));
+    }
+
+    let parsed_hash = PasswordHash::new(&user[0].password)?;
+    let valid = Argon2::default().verify_password(body.password.as_bytes(), &parsed_hash);
+
+    if valid.is_err() {
+        Err(anyhow::format_err!("Invalid email or password"))
+    } else {
+        let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(&mut db).as_bytes())?;
+        let mut claims = BTreeMap::new();
+        claims.insert("sub", user[0].id.to_string());
+        Ok(claims.sign_with_key(&key)?)
+    }
+}
+
+async fn sign_up(state: Arc<AppState>, body: SignUpBody) -> anyhow::Result<()> {
     use crate::schema::users;
 
     let salt = SaltString::generate(&mut OsRng);
@@ -67,19 +116,24 @@ async fn sign_up(state: Arc<AppState>, body: SignUpBody) -> Result<(), hyper::Er
 async fn handle_request(
     state: Arc<AppState>,
     req: Request<Incoming>,
-) -> Result<Response<String>, hyper::Error> {
+) -> Result<Response<String>, anyhow::Error> {
     let method = req.method().clone();
     let uri = req.uri().path().to_owned();
 
-    println!("Incoming request [{}]: {}", method, uri);
+    println!("[{}]: {}", method, uri);
 
     let collection = req.collect().await.unwrap();
     let bytes = collection.to_bytes();
     let body = str::from_utf8(&bytes).unwrap();
 
+    let mut result = None;
+
     match (method, uri.as_str()) {
         (Method::POST, "/auth/sign-up") => {
-            sign_up(state.clone(), serde_json::from_str(body).unwrap()).await?;
+            sign_up(state.clone(), serde_json::from_str(body)?).await?;
+        }
+        (Method::POST, "/auth/login") => {
+            result = Some(login(state.clone(), serde_json::from_str(body)?).await?);
         }
         _ => {
             let mut response = Response::new("".into());
@@ -88,7 +142,7 @@ async fn handle_request(
         }
     }
 
-    Ok(Response::new("Ok".into()))
+    Ok(Response::new(result.unwrap_or("".into())))
 }
 
 fn connect_to_db() -> PgConnection {
@@ -96,6 +150,43 @@ fn connect_to_db() -> PgConnection {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     PgConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+}
+
+/// Returns the signing key for authorization tokens. And creates one if needed.
+fn get_jwt_signing_key(db: &mut PgConnection) -> String {
+    use crate::models::Setting;
+    use crate::schema::settings;
+    use crate::schema::settings::dsl::*;
+
+    let setting = settings
+        .select(crate::models::Setting::as_select())
+        .filter(key.eq("AUTH_JWT_SIGNING_KEY"))
+        .limit(1)
+        .load(db)
+        .context("Could not get JWT signing key from database")
+        .unwrap();
+
+    if setting.len() == 1 {
+        return setting[0].value.clone();
+    }
+
+    println!("No JWT signing key present. Generating one...");
+
+    let signing_key: String = rng()
+        .sample_iter(&Alphanumeric)
+        .take(128)
+        .map(char::from)
+        .collect();
+
+    diesel::insert_into(settings::table)
+        .values(&Setting {
+            key: "AUTH_JWT_SIGNING_KEY".into(),
+            value: signing_key.clone(),
+        })
+        .execute(&mut *db)
+        .unwrap();
+
+    signing_key
 }
 
 struct AppState {

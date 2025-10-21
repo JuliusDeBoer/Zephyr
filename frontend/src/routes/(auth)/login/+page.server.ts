@@ -24,10 +24,9 @@ export const actions: Actions = {
 			body: JSON.stringify(form.data)
 		});
 
-		console.debug(await result.text());
-
 		return {
-			form
+			form,
+			token: await result.text()
 		};
 	}
 };

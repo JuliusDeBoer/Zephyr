@@ -3,17 +3,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use argon2::Argon2;
-use argon2::PasswordHash;
-use argon2::PasswordHasher;
-use argon2::PasswordVerifier;
 use argon2::password_hash::{SaltString, rand_core::OsRng};
-use diesel::Connection;
-use diesel::ExpressionMethods;
-use diesel::PgConnection;
-use diesel::QueryDsl;
-use diesel::RunQueryDsl;
-use diesel::SelectableHelper;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use diesel::{
+    Connection, ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper,
+};
 use dotenvy::dotenv;
 use hmac::{Hmac, Mac};
 use http_body_util::BodyExt;
@@ -23,14 +17,12 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use jwt::SignWithKey;
-use rand::rng;
-use rand::{Rng, distr::Alphanumeric};
+use rand::{Rng, distr::Alphanumeric, rng};
+use serde::{self, Deserialize};
 use sha2::Sha256;
 use std::collections::BTreeMap;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
-
-use serde::{self, Deserialize};
 use uuid::Uuid;
 
 use crate::models::User;
@@ -69,6 +61,7 @@ async fn login(state: Arc<AppState>, body: LoginBody) -> anyhow::Result<String> 
 
     assert!(user.len() <= 1);
     if user.is_empty() {
+        // TODO(Julius): Do good user-facing errors
         return Err(anyhow::format_err!("Invalid email or password"));
     }
 
@@ -76,6 +69,7 @@ async fn login(state: Arc<AppState>, body: LoginBody) -> anyhow::Result<String> 
     let valid = Argon2::default().verify_password(body.password.as_bytes(), &parsed_hash);
 
     if valid.is_err() {
+        // TODO(Julius): Do good user-facing errors
         Err(anyhow::format_err!("Invalid email or password"))
     } else {
         let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(&mut db).as_bytes())?;

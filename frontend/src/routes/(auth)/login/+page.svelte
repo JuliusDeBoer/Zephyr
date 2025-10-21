@@ -10,7 +10,13 @@
 	let { data }: { data: PageData } = $props();
 
 	const form = superForm(data.form, {
-		validators: zodClient(schema)
+		validators: zodClient(schema),
+		onResult: (result) => {
+			console.debug(result);
+			// @ts-expect-error I cannot be bothered to actaully fix the type
+			localStorage.setItem('ZEPHYR_AUTH', result.result.data.token);
+			location.href = '/cal';
+		}
 	});
 
 	const { form: formData, enhance } = form;

@@ -42,10 +42,6 @@ pub enum FreeBusyType {
     BusyAvailable,
 }
 
-/// A utility function to write to a [Formatter].
-///
-/// When [val] is `Some()` the writer will write `{}:{}\r\n` to the formatter.
-/// Where the two arguments are `name` and `val.unwrap()`
 fn wrap_icalendar_line(s: &str, width: usize) -> String {
     let mut result = String::new();
     let mut start = 0;

@@ -1,35 +1,23 @@
-use std::env;
-use std::net::SocketAddr;
-use std::sync::Arc;
-
-use anyhow::Context;
+use crate::entity::prelude::{InstanceSetting, User};
+use crate::entity::{instance_setting, user};
+use actix_web::{App, HttpResponse, HttpServer, post, web};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use diesel::{
-    Connection, ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper,
-};
 use dotenvy::dotenv;
 use hmac::{Hmac, Mac};
-use http_body_util::BodyExt;
-use hyper::body::Incoming;
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{Method, Request, Response, StatusCode};
-use hyper_util::rt::TokioIo;
 use jwt::SignWithKey;
 use rand::{Rng, distr::Alphanumeric, rng};
+use sea_orm::entity::*;
+use sea_orm::{ColumnTrait, QueryFilter};
+use sea_orm::{Database, DatabaseConnection};
 use serde::{self, Deserialize};
 use sha2::Sha256;
 use std::collections::BTreeMap;
-use tokio::net::TcpListener;
-use tokio::sync::Mutex;
+use std::env;
 use uuid::Uuid;
 
-use crate::models::User;
-
+mod entity;
 mod icalendar;
-mod models;
-mod schema;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -48,40 +36,36 @@ struct LoginBody {
     password: String,
 }
 
-async fn login(state: Arc<AppState>, body: LoginBody) -> anyhow::Result<String> {
-    use crate::schema::users::dsl::*;
+#[post("/auth/login")]
+async fn login(db: web::Data<DatabaseConnection>, body: web::Json<LoginBody>) -> HttpResponse {
+    let user_result = User::find()
+        .filter(user::Column::Email.eq(body.email.clone()))
+        .one(db.as_ref())
+        .await
+        .expect("Could not query DB");
 
-    let mut db = state.db.lock().await;
-    let user = users
-        .select(crate::models::User::as_select())
-        .filter(email.eq(body.email))
-        .limit(1)
-        .load(&mut *db)
-        .context("Could not get user from database")?;
-
-    assert!(user.len() <= 1);
-    if user.is_empty() {
-        // TODO(Julius): Do good user-facing errors
-        return Err(anyhow::format_err!("Invalid email or password"));
+    if user_result.is_none() {
+        return HttpResponse::BadRequest().await.unwrap();
     }
 
-    let parsed_hash = PasswordHash::new(&user[0].password)?;
+    let user = user_result.unwrap();
+
+    let parsed_hash = PasswordHash::new(&user.password).unwrap();
     let valid = Argon2::default().verify_password(body.password.as_bytes(), &parsed_hash);
 
     if valid.is_err() {
-        // TODO(Julius): Do good user-facing errors
-        Err(anyhow::format_err!("Invalid email or password"))
+        HttpResponse::BadRequest().await.unwrap()
     } else {
-        let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(&mut db).as_bytes())?;
+        let key: Hmac<Sha256> =
+            Hmac::new_from_slice(get_jwt_signing_key(&db).await.as_bytes()).unwrap();
         let mut claims = BTreeMap::new();
-        claims.insert("sub", user[0].id.to_string());
-        Ok(claims.sign_with_key(&key)?)
+        claims.insert("sub", user.id.to_string());
+        HttpResponse::Ok().body(claims.sign_with_key(&key).unwrap())
     }
 }
 
-async fn sign_up(state: Arc<AppState>, body: SignUpBody) -> anyhow::Result<()> {
-    use crate::schema::users;
-
+#[post("/auth/sign-up")]
+async fn sign_up(body: web::Json<SignUpBody>, conn: web::Data<DatabaseConnection>) -> HttpResponse {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     let password_hash = argon2
@@ -89,79 +73,37 @@ async fn sign_up(state: Arc<AppState>, body: SignUpBody) -> anyhow::Result<()> {
         .unwrap()
         .to_string();
 
-    let user = User {
-        id: Uuid::new_v4(),
-        email: body.email,
-        password: password_hash,
-        first_name: body.first_name,
-        last_name: body.last_name,
-        affix: body.affix,
+    let user = user::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        email: Set(body.email.clone()),
+        password: Set(password_hash),
+        first_name: Set(body.first_name.clone()),
+        last_name: Set(body.last_name.clone()),
+        affix: Set(body.affix.clone()),
     };
 
-    let mut db = state.db.lock().await;
-    diesel::insert_into(users::table)
-        .values(&user)
-        .execute(&mut *db)
-        .unwrap();
+    let _ = user.insert(conn.as_ref()).await;
 
-    Ok(())
+    HttpResponse::Created()
+        .await
+        .expect("Could not create response")
 }
 
-async fn handle_request(
-    state: Arc<AppState>,
-    req: Request<Incoming>,
-) -> Result<Response<String>, anyhow::Error> {
-    let method = req.method().clone();
-    let uri = req.uri().path().to_owned();
-
-    println!("[{}]: {}", method, uri);
-
-    let collection = req.collect().await.unwrap();
-    let bytes = collection.to_bytes();
-    let body = str::from_utf8(&bytes).unwrap();
-
-    let mut result = None;
-
-    match (method, uri.as_str()) {
-        (Method::POST, "/auth/sign-up") => {
-            sign_up(state.clone(), serde_json::from_str(body)?).await?;
-        }
-        (Method::POST, "/auth/login") => {
-            result = Some(login(state.clone(), serde_json::from_str(body)?).await?);
-        }
-        _ => {
-            let mut response = Response::new("".into());
-            *response.status_mut() = StatusCode::NOT_FOUND;
-            return Ok(response);
-        }
-    }
-
-    Ok(Response::new(result.unwrap_or("".into())))
-}
-
-fn connect_to_db() -> PgConnection {
+fn get_db_string() -> String {
     dotenv().ok();
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+    env::var("DATABASE_URL").expect("DATABASE_URL must be set")
 }
 
 /// Returns the signing key for authorization tokens. And creates one if needed.
-fn get_jwt_signing_key(db: &mut PgConnection) -> String {
-    use crate::models::Setting;
-    use crate::schema::settings;
-    use crate::schema::settings::dsl::*;
+async fn get_jwt_signing_key(db: &DatabaseConnection) -> String {
+    let setting = InstanceSetting::find()
+        .filter(instance_setting::Column::Key.eq("AUTH_JWT_SIGNING_KEY"))
+        .one(db)
+        .await
+        .expect("Could not query database");
 
-    let setting = settings
-        .select(crate::models::Setting::as_select())
-        .filter(key.eq("AUTH_JWT_SIGNING_KEY"))
-        .limit(1)
-        .load(db)
-        .context("Could not get JWT signing key from database")
-        .unwrap();
-
-    if setting.len() == 1 {
-        return setting[0].value.clone();
+    if let Some(setting) = setting {
+        return setting.value.clone();
     }
 
     println!("No JWT signing key present. Generating one...");
@@ -172,47 +114,29 @@ fn get_jwt_signing_key(db: &mut PgConnection) -> String {
         .map(char::from)
         .collect();
 
-    diesel::insert_into(settings::table)
-        .values(&Setting {
-            key: "AUTH_JWT_SIGNING_KEY".into(),
-            value: signing_key.clone(),
-        })
-        .execute(&mut *db)
-        .unwrap();
+    let new_setting = instance_setting::ActiveModel {
+        key: Set("AUTH_JWT_SIGNING_KEY".to_string()),
+        value: Set(signing_key.clone()),
+    };
+
+    let _ = new_setting.insert(db).await;
 
     signing_key
 }
 
-struct AppState {
-    pub db: Mutex<PgConnection>,
-}
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let conn = Database::connect(get_db_string())
+        .await
+        .expect("Could not connect to database");
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    let listener = TcpListener::bind(addr).await?;
-
-    let db = connect_to_db();
-    let state = Arc::new(AppState { db: Mutex::new(db) });
-
-    println!("Hosting on: {}", addr);
-
-    loop {
-        let (stream, _) = listener.accept().await?;
-        let io = TokioIo::new(stream);
-
-        let state = state.clone();
-
-        tokio::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(
-                    io,
-                    service_fn(move |req| handle_request(state.clone(), req)),
-                )
-                .await
-            {
-                eprintln!("Error serving: {:?}", err);
-            }
-        });
-    }
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(conn.clone()))
+            .service(sign_up)
+            .service(login)
+    })
+    .bind(("127.0.0.1", 3000))?
+    .run()
+    .await
 }

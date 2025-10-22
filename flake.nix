@@ -19,8 +19,8 @@
       devShell.${system} = pkgs.mkShell {
         buildInputs = with pkgs; [
           jdk
-          diesel-cli
           postgresql
+          sea-orm-cli
         ];
       };
     };

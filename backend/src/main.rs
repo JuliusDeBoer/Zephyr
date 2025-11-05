@@ -1,11 +1,12 @@
 use std::{env, sync::Arc};
 
-use actix_web::{App, HttpServer, dev::Service, web};
+use actix_web::{App, HttpServer, dev::Service, middleware, web};
 use dotenvy::dotenv;
 use futures_util::future::FutureExt;
 use sea_orm::Database;
 
 mod auth;
+mod caldav;
 mod entity;
 mod icalendar;
 
@@ -26,6 +27,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(conn.clone()))
             .service(web::scope("/auth").configure(auth::configure))
+            .service(web::scope("/caldav").configure(caldav::configure))
+            .wrap(middleware::NormalizePath::trim())
             .wrap_fn(|req, srv| {
                 srv.call(req).map(|res| {
                     match res {

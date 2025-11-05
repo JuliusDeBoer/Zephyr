@@ -61,7 +61,7 @@ async fn login(db: web::Data<Arc<DatabaseConnection>>, body: web::Json<LoginBody
         HttpResponse::BadRequest().await.unwrap()
     } else {
         let key: Hmac<Sha256> =
-            Hmac::new_from_slice(get_jwt_signing_key(&db).await.unwrap().as_bytes()).unwrap();
+            Hmac::new_from_slice(get_jwt_signing_key(db).await.unwrap().as_bytes()).unwrap();
         let mut claims = BTreeMap::new();
         claims.insert("sub", user.id.to_string());
         HttpResponse::Ok().body(claims.sign_with_key(&key).unwrap())

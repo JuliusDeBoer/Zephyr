@@ -16,7 +16,7 @@ futures-util = "0.3.31"
 hmac = "0.12.1"
 hyper = { version = "1.7.0", features = [ "full" ] }
 jwt = "0.16.0"
-quick-xml = { version = "0.38.3", features = ["async-tokio", "serialize"] }
+quick-xml = { version = "0.38.3", features = ["async-tokio"] }
 rand = "0.9.2"
 sea-orm = { version = "1.1.17", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-chrono", "with-uuid"] }
 serde = { version = "1.0.223", features = ["derive"]}

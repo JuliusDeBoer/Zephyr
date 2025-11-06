@@ -9,6 +9,7 @@ mod auth;
 mod caldav;
 mod entity;
 mod icalendar;
+mod xml;
 
 fn get_db_string() -> String {
     dotenv().ok();

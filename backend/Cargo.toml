@@ -12,6 +12,7 @@ anyhow = "1.0.100"
 argon2 = { version = "0.5.3", features = ["std"] }
 chrono = "0.4.42"
 dotenvy = "0.15.7"
+env_logger = "0.11.8"
 futures-util = "0.3.31"
 hmac = "0.12.1"
 hyper = { version = "1.7.0", features = [ "full" ] }

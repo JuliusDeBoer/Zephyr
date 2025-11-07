@@ -2,8 +2,11 @@ use std::{env, sync::Arc};
 
 use actix_web::{App, HttpServer, dev::Service, middleware, web};
 use dotenvy::dotenv;
+use env_logger::Env;
 use futures_util::future::FutureExt;
 use sea_orm::Database;
+
+use crate::caldav::CalDavAuth;
 
 mod auth;
 mod caldav;
@@ -24,26 +27,19 @@ async fn main() -> std::io::Result<()> {
             .expect("Could not connect to database"),
     );
 
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(conn.clone()))
-            .service(web::scope("/auth").configure(auth::configure))
-            .service(web::scope("/caldav").configure(caldav::configure))
             .wrap(middleware::NormalizePath::trim())
-            .wrap_fn(|req, srv| {
-                srv.call(req).map(|res| {
-                    match res {
-                        Ok(ref v) => println!(
-                            "[{}]: {} -> {}",
-                            v.request().method(),
-                            v.request().path(),
-                            v.status()
-                        ),
-                        Err(ref e) => println!("{}", &e),
-                    };
-                    res
-                })
-            })
+            .wrap(middleware::Logger::default())
+            .service(web::scope("/auth").configure(auth::configure))
+            .service(
+                web::scope("/caldav")
+                    .configure(caldav::configure)
+                    .wrap(CalDavAuth::default()),
+            )
     })
     .bind(("127.0.0.1", 3000));
 
@@ -55,6 +51,5 @@ async fn main() -> std::io::Result<()> {
         ));
     }
 
-    println!("Hosting on 127.0.0.1:3000");
     server.unwrap().run().await
 }

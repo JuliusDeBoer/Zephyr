@@ -26,6 +26,7 @@ impl XmlWriter {
         Self { writer }
     }
 
+    #[cfg(test)]
     pub fn new_with_indent() -> Self {
         let mut writer = Writer::new_with_indent(Vec::new(), b' ', 4);
         _ = writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)));

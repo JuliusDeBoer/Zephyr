@@ -3,7 +3,6 @@ use quick_xml::{
     Writer,
     events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event},
 };
-use uuid::Bytes;
 
 /// A collection of namespaces used when serializing to XML
 pub static WEBDAV_NAMESPACES: &[(&str, &str)] = &[
@@ -26,7 +25,7 @@ impl XmlWriter {
         Self { writer }
     }
 
-    #[cfg(test)]
+    #[allow(unused, reason = "Used in testing for better diffs")]
     pub fn new_with_indent() -> Self {
         let mut writer = Writer::new_with_indent(Vec::new(), b' ', 4);
         _ = writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)));
@@ -78,7 +77,7 @@ impl XmlWriter {
         Ok(())
     }
 
-    pub fn into_bytes(&mut self) -> Vec<u8> {
-        self.writer.clone().into_inner()
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.writer.into_inner()
     }
 }

@@ -1,18 +1,16 @@
 use std::{env, sync::Arc};
 
-use actix_web::{App, HttpServer, dev::Service, middleware, web};
+use actix_web::{App, HttpServer, middleware, web};
 use dotenvy::dotenv;
 use env_logger::Env;
-use futures_util::future::FutureExt;
 use sea_orm::Database;
 
-use crate::caldav::CalDavAuth;
+use crate::webdav::{caldav, middleware::CalDavAuth};
 
 mod auth;
-mod caldav;
 mod entity;
 mod icalendar;
-mod xml;
+mod webdav;
 
 fn get_db_string() -> String {
     dotenv().ok();

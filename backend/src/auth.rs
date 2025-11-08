@@ -4,9 +4,9 @@ use std::sync::Arc;
 use actix_web::HttpResponse;
 use actix_web::post;
 use actix_web::web;
-use anyhow::Context;
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use eyre::Context;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use rand::{Rng, distr::Alphanumeric, rng};
@@ -99,7 +99,7 @@ async fn sign_up(
 }
 
 /// Returns the signing key for authorization tokens. And creates one if needed.
-async fn get_jwt_signing_key(db: &DatabaseConnection) -> anyhow::Result<String> {
+async fn get_jwt_signing_key(db: &DatabaseConnection) -> eyre::Result<String> {
     let setting = InstanceSetting::find()
         .filter(instance_setting::Column::Key.eq("AUTH_JWT_SIGNING_KEY"))
         .one(db)

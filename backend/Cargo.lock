@@ -509,6 +509,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "argon2",
+ "base64 0.22.1",
  "chrono",
  "dotenvy",
  "env_logger",

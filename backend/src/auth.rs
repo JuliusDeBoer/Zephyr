@@ -1,25 +1,19 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use actix_web::HttpResponse;
-use actix_web::post;
-use actix_web::web;
+use actix_web::{HttpResponse, post, web};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use eyre::Context;
+use argon2::{Argon2, PasswordHasher};
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
-use rand::{Rng, distr::Alphanumeric, rng};
-use sea_orm::DatabaseConnection;
-use sea_orm::entity::*;
-use sea_orm::{ColumnTrait, QueryFilter};
-use serde::Deserialize;
-use serde::Serialize;
+use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::*};
+use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;
 
-use crate::entity::prelude::{InstanceSetting, User};
-use crate::entity::{instance_setting, user};
+use crate::entity::prelude::User;
+use crate::entity::user;
+use crate::jwt::{get_jwt_signing_key, validate_credentials};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -42,29 +36,25 @@ struct LoginBody {
 async fn login(db: web::Data<Arc<DatabaseConnection>>, body: web::Json<LoginBody>) -> HttpResponse {
     let db = db.as_ref().as_ref();
 
-    let user_result = User::find()
-        .filter(user::Column::Email.eq(body.email.clone()))
-        .one(db)
+    let valid = validate_credentials(&body.email, &body.password, db)
         .await
-        .expect("Could not query DB");
+        .unwrap();
 
-    if user_result.is_none() {
-        return HttpResponse::BadRequest().await.unwrap();
-    }
+    if valid {
+        let user = User::find()
+            .filter(user::Column::Email.eq(&body.email))
+            .one(db)
+            .await
+            .unwrap()
+            .unwrap();
 
-    let user = user_result.unwrap();
-
-    let parsed_hash = PasswordHash::new(&user.password).unwrap();
-    let valid = Argon2::default().verify_password(body.password.as_bytes(), &parsed_hash);
-
-    if valid.is_err() {
-        HttpResponse::BadRequest().await.unwrap()
-    } else {
         let key: Hmac<Sha256> =
             Hmac::new_from_slice(get_jwt_signing_key(db).await.unwrap().as_bytes()).unwrap();
         let mut claims = BTreeMap::new();
         claims.insert("sub", user.id.to_string());
         HttpResponse::Ok().body(claims.sign_with_key(&key).unwrap())
+    } else {
+        HttpResponse::BadRequest().await.unwrap()
     }
 }
 
@@ -96,39 +86,6 @@ async fn sign_up(
     HttpResponse::Created()
         .await
         .expect("Could not create response")
-}
-
-/// Returns the signing key for authorization tokens. And creates one if needed.
-async fn get_jwt_signing_key(db: &DatabaseConnection) -> eyre::Result<String> {
-    let setting = InstanceSetting::find()
-        .filter(instance_setting::Column::Key.eq("AUTH_JWT_SIGNING_KEY"))
-        .one(db)
-        .await
-        .context("Error while attempting to obtain AUTH_JWT_SIGNING_KEY from instance settings")?;
-
-    if let Some(setting) = setting {
-        return Ok(setting.value.clone());
-    }
-
-    println!("No JWT signing key present. Generating one...");
-
-    let signing_key: String = rng()
-        .sample_iter(&Alphanumeric)
-        .take(128)
-        .map(char::from)
-        .collect();
-
-    let new_setting = instance_setting::ActiveModel {
-        key: Set("AUTH_JWT_SIGNING_KEY".to_string()),
-        value: Set(signing_key.clone()),
-    };
-
-    new_setting
-        .insert(db)
-        .await
-        .context("Could not insert new setting")?;
-
-    Ok(signing_key)
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

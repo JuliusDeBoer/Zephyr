@@ -10,6 +10,7 @@ use crate::webdav::{caldav, middleware::CalDavAuth};
 mod auth;
 mod entity;
 mod icalendar;
+mod jwt;
 mod webdav;
 
 fn get_db_string() -> String {

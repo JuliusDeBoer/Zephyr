@@ -11,6 +11,7 @@ mod auth;
 mod entity;
 mod icalendar;
 mod jwt;
+mod util;
 mod webdav;
 
 fn get_db_string() -> String {

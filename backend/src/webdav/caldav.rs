@@ -20,8 +20,7 @@ async fn handle_options() -> HttpResponse {
         // Note(Julius): Now you *could* argue that having this hardcoded is a
         //               bad idea. However I dont really care.
         .append_header(("Allow", "OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL"))
-        .await
-        .unwrap()
+        .finish()
 }
 
 async fn handle_propfind() -> HttpResponse {

@@ -1,20 +1,29 @@
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use eyre::{Context, Result};
 use rand::{Rng, distr::Alphanumeric, rng};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait};
-use sea_orm::{QueryFilter, entity::*};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
+    entity::*,
+};
 
 use crate::entity::instance_setting;
 use crate::entity::prelude::{InstanceSetting, User};
 use crate::entity::user;
+
+#[derive(DerivePartialModel, FromQueryResult)]
+#[sea_orm(entity = "user::Entity")]
+struct PasswordOnly {
+    password: String,
+}
 
 pub async fn validate_credentials(
     email: &String,
     password: &String,
     db: &DatabaseConnection,
 ) -> Result<bool> {
-    let user_result = User::find()
+    let user_result: Option<PasswordOnly> = User::find()
         .filter(user::Column::Email.eq(email))
+        .into_partial_model()
         .one(db)
         .await?;
 

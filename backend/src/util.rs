@@ -1,0 +1,26 @@
+use actix_web::{ResponseError, http::StatusCode};
+use argon2::password_hash;
+use hmac::digest::InvalidLength;
+
+#[derive(thiserror::Error, Debug)]
+pub enum EndpointError {
+    #[error(transparent)]
+    UnexpectedError(#[from] eyre::Error),
+    #[error("{0}")]
+    DatabaseError(#[from] sea_orm::DbErr),
+    #[error("{0}")]
+    InvalidLength(#[from] InvalidLength),
+    #[error("{0}")]
+    JwtError(#[from] jwt::Error),
+    #[error("{0}")]
+    PasswordHashError(#[from] password_hash::Error),
+}
+
+impl ResponseError for EndpointError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            EndpointError::InvalidLength(_) => StatusCode::BAD_REQUEST,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}

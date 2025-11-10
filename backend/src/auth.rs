@@ -4,6 +4,7 @@ use std::sync::Arc;
 use actix_web::{HttpResponse, post, web};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
+use eyre::eyre;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::*};
@@ -14,6 +15,7 @@ use uuid::Uuid;
 use crate::entity::prelude::User;
 use crate::entity::user;
 use crate::jwt::{get_jwt_signing_key, validate_credentials};
+use crate::util::EndpointError;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -33,28 +35,27 @@ struct LoginBody {
 }
 
 #[post("/login")]
-async fn login(db: web::Data<Arc<DatabaseConnection>>, body: web::Json<LoginBody>) -> HttpResponse {
+async fn login(
+    db: web::Data<Arc<DatabaseConnection>>,
+    body: web::Json<LoginBody>,
+) -> Result<HttpResponse, EndpointError> {
     let db = db.as_ref().as_ref();
 
-    let valid = validate_credentials(&body.email, &body.password, db)
-        .await
-        .unwrap();
+    let valid = validate_credentials(&body.email, &body.password, db).await?;
 
     if valid {
         let user = User::find()
             .filter(user::Column::Email.eq(&body.email))
             .one(db)
-            .await
-            .unwrap()
+            .await?
             .unwrap();
 
-        let key: Hmac<Sha256> =
-            Hmac::new_from_slice(get_jwt_signing_key(db).await.unwrap().as_bytes()).unwrap();
+        let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(db).await?.as_bytes())?;
         let mut claims = BTreeMap::new();
         claims.insert("sub", user.id.to_string());
-        HttpResponse::Ok().body(claims.sign_with_key(&key).unwrap())
+        Ok(HttpResponse::Ok().body(claims.sign_with_key(&key)?))
     } else {
-        HttpResponse::BadRequest().await.unwrap()
+        Ok(HttpResponse::BadRequest().finish())
     }
 }
 
@@ -62,14 +63,13 @@ async fn login(db: web::Data<Arc<DatabaseConnection>>, body: web::Json<LoginBody
 async fn sign_up(
     body: web::Json<SignUpBody>,
     db: web::Data<Arc<DatabaseConnection>>,
-) -> HttpResponse {
+) -> Result<HttpResponse, EndpointError> {
     let db = db.as_ref().as_ref();
 
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     let password_hash = argon2
-        .hash_password(body.password.as_bytes(), &salt)
-        .unwrap()
+        .hash_password(body.password.as_bytes(), &salt)?
         .to_string();
 
     let user = user::ActiveModel {
@@ -81,11 +81,9 @@ async fn sign_up(
         affix: Set(body.affix.clone()),
     };
 
-    let _ = user.insert(db).await;
+    user.insert(db).await?;
 
-    HttpResponse::Created()
-        .await
-        .expect("Could not create response")
+    Ok(HttpResponse::Created().finish())
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -126,6 +124,10 @@ mod tests {
         let service_result = test::call_service(&app, req).await;
         let resp = service_result.response();
 
-        assert!(resp.status().is_success());
+        assert!(
+            resp.status().is_success(),
+            "Returned with: {}",
+            resp.status()
+        );
     }
 }

@@ -16,10 +16,10 @@ use crate::webdav::{
 #[options("")]
 async fn handle_options() -> HttpResponse {
     HttpResponse::Ok()
-        .append_header(("DAV", 1)) // Basic WebDAV (RFC 2518/4918)
+        .append_header(("DAV", 1))
         // Note(Julius): Now you *could* argue that having this hardcoded is a
         //               bad idea. However I dont really care.
-        .append_header(("Allow", "OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL"))
+        .append_header(("Allow", "OPTIONS, HEAD, PROPFIND"))
         .finish()
 }
 

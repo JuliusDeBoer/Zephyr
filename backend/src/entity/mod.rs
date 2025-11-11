@@ -2,5 +2,6 @@
 
 pub mod prelude;
 
+pub mod calendar;
 pub mod instance_setting;
 pub mod user;

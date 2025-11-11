@@ -4,7 +4,6 @@ use std::sync::Arc;
 use actix_web::{HttpResponse, post, web};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
-use eyre::eyre;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::*};
@@ -12,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;
 
+use crate::entity::calendar;
 use crate::entity::prelude::User;
 use crate::entity::user;
 use crate::jwt::{get_jwt_signing_key, validate_credentials};
@@ -72,8 +72,9 @@ async fn sign_up(
         .hash_password(body.password.as_bytes(), &salt)?
         .to_string();
 
+    let user_id = Uuid::new_v4();
     let user = user::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(user_id),
         email: Set(body.email.clone()),
         password: Set(password_hash),
         first_name: Set(body.first_name.clone()),
@@ -81,7 +82,16 @@ async fn sign_up(
         affix: Set(body.affix.clone()),
     };
 
+    let calendar = calendar::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        title: Set(format!("{}'s calendar", body.first_name).into()),
+        colour: Set("#63a6d7".into()),
+        owner: Set(user_id),
+        ..Default::default()
+    };
+
     user.insert(db).await?;
+    calendar.insert(db).await?;
 
     Ok(HttpResponse::Created().finish())
 }

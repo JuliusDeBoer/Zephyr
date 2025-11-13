@@ -1,16 +1,20 @@
 //! At this point a temporary file to figure out how to implement WebDAV and CalDAV
 
 use actix_web::{
-    HttpResponse,
+    HttpRequest, HttpResponse,
     http::{Method, StatusCode},
     options, web,
 };
 use chrono::DateTime;
 use std::str::FromStr;
 
-use crate::webdav::{
-    response::{MultiStatusResponse, PropStat, Property, ResourceType, Response},
-    xml::{SerializeXml, XmlWriter},
+use crate::{
+    util::EndpointError,
+    webdav::{
+        middleware::UserClaims,
+        response::{MultiStatusResponse, PropStat, Property, ResourceType, Response},
+        xml::{SerializeXml, XmlWriter},
+    },
 };
 
 #[options("")]
@@ -23,28 +27,42 @@ async fn handle_options() -> HttpResponse {
         .finish()
 }
 
-async fn handle_propfind() -> HttpResponse {
-    let body = MultiStatusResponse {
-        responses: vec![Response {
-            href: "/caldav/".into(),
-            properties: vec![PropStat {
-                status_code: StatusCode::OK,
-                prop: Property {
-                    resource_type: ResourceType::Collection,
-                    display_name: "CalDAV".into(),
-                    created_at: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
-                    last_modified: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
-                    current_user_principal: "/caldav/principals/user123/".into(),
-                },
+async fn handle_propfind(
+    req: HttpRequest,
+    user_claims: web::ReqData<UserClaims>,
+) -> Result<HttpResponse, EndpointError> {
+    let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
+        Some(v) => String::from(v.1.to_str()?).parse()?,
+        None => return Err(EndpointError::StatusCodeError(StatusCode::FORBIDDEN)),
+    };
+
+    let body = match depth {
+        i32::MIN..0 => return Err(EndpointError::StatusCodeError(StatusCode::BAD_REQUEST)),
+        0..=i32::MAX => MultiStatusResponse {
+            responses: vec![Response {
+                href: "/caldav/".into(),
+                properties: vec![PropStat {
+                    status_code: StatusCode::OK,
+                    prop: Property {
+                        resource_type: ResourceType::Collection,
+                        display_name: "CalDAV".into(),
+                        created_at: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
+                        last_modified: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
+                        current_user_principal: format!(
+                            "/caldav/principals/{}/",
+                            user_claims.user_id
+                        ),
+                    },
+                }],
             }],
-        }],
+        },
     };
 
     let mut writer = XmlWriter::new();
     body.write_xml(&mut writer).unwrap();
-    HttpResponse::MultiStatus()
+    Ok(HttpResponse::MultiStatus()
         .append_header(("Content-Type", "application/xml"))
-        .body(writer.into_bytes())
+        .body(writer.into_bytes()))
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

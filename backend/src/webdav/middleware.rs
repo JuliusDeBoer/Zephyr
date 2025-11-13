@@ -1,3 +1,4 @@
+use actix_web::HttpMessage;
 use actix_web::{
     HttpResponse,
     body::MessageBody,
@@ -8,14 +9,30 @@ use actix_web::{
 use base64::{Engine, prelude::BASE64_STANDARD};
 use eyre::Result;
 use futures_util::future::LocalBoxFuture;
-use sea_orm::DatabaseConnection;
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
+};
 use std::{
     future::{Ready, ready},
     rc::Rc,
     sync::Arc,
 };
+use uuid::Uuid;
 
+use crate::entity::prelude::User;
+use crate::entity::user;
 use crate::jwt::validate_credentials;
+
+#[derive(Clone, Debug)]
+pub struct UserClaims {
+    pub user_id: Uuid,
+}
+
+#[derive(DerivePartialModel, FromQueryResult)]
+#[sea_orm(entity = "user::Entity")]
+struct IdOnly {
+    id: Uuid,
+}
 
 #[derive(Default)]
 pub struct CalDavAuth {}
@@ -101,14 +118,24 @@ where
             .clone();
 
         let service = self.service.clone();
-        let username = decoded[0].clone();
+        let email = decoded[0].clone();
         let password = decoded[1].clone();
 
         Box::pin(async move {
             let db_ref = db.as_ref().as_ref();
-            match validate_credentials(&username, &password, db_ref).await {
+            match validate_credentials(&email, &password, db_ref).await {
                 Ok(valid) => {
                     if valid {
+                        let user_result: Option<IdOnly> = User::find()
+                            .filter(user::Column::Email.eq(email))
+                            .into_partial_model()
+                            .one(db_ref)
+                            .await
+                            .unwrap();
+
+                        req.request().extensions_mut().insert(UserClaims {
+                            user_id: user_result.unwrap().id,
+                        });
                         service.call(req).await
                     } else {
                         let response = HttpResponse::Unauthorized()

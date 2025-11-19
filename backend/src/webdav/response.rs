@@ -29,6 +29,8 @@ pub struct PropStat {
 pub enum Property {
     Root(RootProperty),
     User(UserProperty),
+    NameOnly(NameOnlyProperty),
+    Calendar(CalendarProperty),
 }
 
 impl SerializeXml for Property {
@@ -36,6 +38,8 @@ impl SerializeXml for Property {
         match self {
             Property::Root(v) => v.write_xml(writer),
             Property::User(v) => v.write_xml(writer),
+            Property::NameOnly(v) => v.write_xml(writer),
+            Property::Calendar(v) => v.write_xml(writer),
         }
     }
 }
@@ -55,6 +59,18 @@ pub struct UserProperty {
     pub calendar_home_set: String,
     pub principal: String,
     pub current_user_principal: String,
+}
+
+#[derive(Debug)]
+pub struct NameOnlyProperty {
+    pub resource_type: ResourceType,
+    pub display_name: String,
+}
+
+#[derive(Debug)]
+pub struct CalendarProperty {
+    pub display_name: String,
+    pub description: String,
 }
 
 #[derive(Debug)]
@@ -85,6 +101,55 @@ impl SerializeXml for Response {
             property.write_xml(writer)?;
         }
         writer.end_element("d:response")?;
+        Ok(())
+    }
+}
+
+impl SerializeXml for NameOnlyProperty {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+        writer.start_element("d:prop")?;
+        writer.start_element("d:resourcetype")?;
+        match self.resource_type {
+            ResourceType::Collection => {
+                writer.empty_element("d:collection")?;
+            }
+            ResourceType::Empty => {}
+            ResourceType::Calendar => {
+                writer.empty_element("cal:calendar")?;
+            }
+        };
+        writer.end_element("d:resourcetype")?;
+        writer.start_element("d:displayname")?;
+        writer.add_text(self.display_name.as_str())?;
+        writer.end_element("d:displayname")?;
+        writer.end_element("d:prop")?;
+        Ok(())
+    }
+}
+
+impl SerializeXml for CalendarProperty {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+        writer.start_element("d:prop")?;
+
+        // NOTE(Julius): It might be worth it to allow changing these
+        //               properties.
+        writer.start_element("d:resourcetype")?;
+        writer.empty_element("d:collection")?;
+        writer.empty_element("cal:calendar")?;
+        writer.end_element("d:resourcetype")?;
+
+        writer.start_element("d:displayname")?;
+        writer.add_text(self.display_name.as_str())?;
+        writer.end_element("d:displayname")?;
+
+        writer.start_element("cal:calendar-description")?;
+        writer.add_text(self.description.as_str())?;
+        writer.end_element("cal:calendar-description")?;
+
+        writer.start_element("cal:supported-calendar-component-set")?;
+        writer.empty_element_with_attrs("cal:comp", &[("name", "VEVENT")])?;
+        writer.end_element("cal:supported-calendar-component-set")?;
+        writer.end_element("d:prop")?;
         Ok(())
     }
 }

@@ -14,6 +14,7 @@ use crate::{
         middleware::UserClaims,
         principals,
         response::{MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty},
+        users,
         xml::{SerializeXml, XmlWriter},
     },
 };
@@ -73,6 +74,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 
     principals::configure(cfg);
+    users::configure(cfg);
 }
 
 #[cfg(test)]

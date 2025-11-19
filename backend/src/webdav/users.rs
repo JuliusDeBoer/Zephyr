@@ -12,7 +12,8 @@ use crate::{
     entity::prelude::User,
     util::status_error,
     webdav::{
-        response::{Property, UserProperty},
+        middleware::UserClaims,
+        response::{CalendarProperty, NameOnlyProperty, Property, ResourceType, UserProperty},
         xml::XmlWriter,
     },
 };
@@ -25,6 +26,7 @@ use crate::{
 async fn handle_propfind(
     req: HttpRequest,
     db: web::Data<Arc<DatabaseConnection>>,
+    user_claims: web::ReqData<UserClaims>,
 ) -> Result<HttpResponse, EndpointError> {
     let db = db.as_ref().as_ref();
 
@@ -53,20 +55,43 @@ async fn handle_propfind(
         None => return Err(status_error(StatusCode::FORBIDDEN)),
     };
 
+    let mut calendars;
+    if depth >= 1 {
+        calendars = User::find()
+            .filter(user::Column::Id.eq(user_claims.user_id))
+            .find_with_related(crate::entity::calendar::Entity)
+            .all(db)
+            .await?[0]
+            .1
+            .iter()
+            .map(|v| PropStat {
+                status_code: StatusCode::OK,
+                prop: Property::Calendar(CalendarProperty {
+                    display_name: v.title.clone(),
+                    description: "".into(),
+                }),
+            })
+            .collect();
+    } else {
+        calendars = vec![];
+    }
+
+    let mut properties = vec![PropStat {
+        status_code: StatusCode::OK,
+        prop: Property::NameOnly(NameOnlyProperty {
+            display_name: user.display_name,
+            resource_type: ResourceType::Collection,
+        }),
+    }];
+
+    properties.append(&mut calendars);
+
     let body = match depth {
         i32::MIN..0 => return Err(status_error(StatusCode::BAD_REQUEST)),
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),
-                properties: vec![PropStat {
-                    status_code: StatusCode::OK,
-                    prop: Property::User(UserProperty {
-                        display_name: user.display_name,
-                        calendar_home_set: format!("/caldav/users/{}", user.id),
-                        principal: format!("/caldav/principals/users/{}", user.id),
-                        current_user_principal: format!("/caldav/principals/users/{}", user.id),
-                    }),
-                }],
+                properties: properties,
             }],
         },
     };
@@ -80,7 +105,7 @@ async fn handle_propfind(
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route(
-        "principals/users/{user_id}",
+        "users/{user_id}",
         web::route()
             .method(Method::from_str("PROPFIND").unwrap())
             .to(handle_propfind),

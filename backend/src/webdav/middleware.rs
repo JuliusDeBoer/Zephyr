@@ -87,8 +87,8 @@ where
         };
 
         let auth_header = auth.unwrap().1.to_str().unwrap_or("");
-        let auth_value = if auth_header.starts_with("Basic ") {
-            &auth_header[6..]
+        let auth_value = if let Some(stripped) = auth_header.strip_prefix("Basic ") {
+            stripped
         } else {
             auth_header
         };

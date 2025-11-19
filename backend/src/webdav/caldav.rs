@@ -12,7 +12,8 @@ use crate::{
     util::EndpointError,
     webdav::{
         middleware::UserClaims,
-        response::{MultiStatusResponse, PropStat, Property, ResourceType, Response},
+        principals,
+        response::{MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty},
         xml::{SerializeXml, XmlWriter},
     },
 };
@@ -21,8 +22,6 @@ use crate::{
 async fn handle_options() -> HttpResponse {
     HttpResponse::Ok()
         .append_header(("DAV", 1))
-        // Note(Julius): Now you *could* argue that having this hardcoded is a
-        //               bad idea. However I dont really care.
         .append_header(("Allow", "OPTIONS, HEAD, PROPFIND"))
         .finish()
 }
@@ -43,16 +42,16 @@ async fn handle_propfind(
                 href: "/caldav/".into(),
                 properties: vec![PropStat {
                     status_code: StatusCode::OK,
-                    prop: Property {
+                    prop: Property::Root(RootProperty {
                         resource_type: ResourceType::Collection,
                         display_name: "CalDAV".into(),
                         created_at: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
                         last_modified: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
                         current_user_principal: format!(
-                            "/caldav/principals/{}/",
+                            "/caldav/principals/users/{}/",
                             user_claims.user_id
                         ),
-                    },
+                    }),
                 }],
             }],
         },
@@ -72,11 +71,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .method(Method::from_str("PROPFIND").unwrap())
             .to(handle_propfind),
     );
+
+    principals::configure(cfg);
 }
 
 #[cfg(test)]
 mod test {
-    use crate::webdav::xml::XmlWriter;
+    use crate::webdav::{response::Property, xml::XmlWriter};
 
     use actix_web::http::StatusCode;
     use chrono::DateTime;
@@ -112,13 +113,13 @@ mod test {
                 href: "/caldav/".into(),
                 properties: vec![PropStat {
                     status_code: StatusCode::OK,
-                    prop: Property {
+                    prop: Property::Root(RootProperty {
                         resource_type: ResourceType::Collection,
                         display_name: "CalDAV".into(),
                         created_at: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
                         last_modified: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
                         current_user_principal: "/caldav/principals/user123/".into(),
-                    },
+                    }),
                 }],
             }],
         };

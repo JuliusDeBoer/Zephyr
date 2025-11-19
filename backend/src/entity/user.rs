@@ -13,6 +13,7 @@ pub struct Model {
     pub first_name: String,
     pub affix: Option<String>,
     pub last_name: String,
+    pub display_name: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

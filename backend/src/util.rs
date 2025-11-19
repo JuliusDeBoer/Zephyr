@@ -7,6 +7,10 @@ use actix_web::{
 use argon2::password_hash;
 use hmac::digest::InvalidLength;
 
+pub fn status_error(code: StatusCode) -> EndpointError {
+    EndpointError::StatusCodeError(code)
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum EndpointError {
     #[error(transparent)]

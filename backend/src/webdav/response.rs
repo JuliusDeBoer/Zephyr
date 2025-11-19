@@ -26,11 +26,34 @@ pub struct PropStat {
 }
 
 #[derive(Debug)]
-pub struct Property {
+pub enum Property {
+    Root(RootProperty),
+    User(UserProperty),
+}
+
+impl SerializeXml for Property {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+        match self {
+            Property::Root(v) => v.write_xml(writer),
+            Property::User(v) => v.write_xml(writer),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RootProperty {
     pub resource_type: ResourceType,
     pub display_name: String,
     pub last_modified: DateTime<Utc>,
     pub created_at: DateTime<Local>,
+    pub current_user_principal: String,
+}
+
+#[derive(Debug)]
+pub struct UserProperty {
+    pub display_name: String,
+    pub calendar_home_set: String,
+    pub principal: String,
     pub current_user_principal: String,
 }
 
@@ -78,7 +101,7 @@ impl SerializeXml for PropStat {
     }
 }
 
-impl SerializeXml for Property {
+impl SerializeXml for RootProperty {
     fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
         writer.start_element("d:prop")?;
         writer.start_element("d:resourcetype")?;
@@ -107,6 +130,32 @@ impl SerializeXml for Property {
                 .as_str(),
         )?;
         writer.end_element("d:creationdate")?;
+        writer.start_element("d:current-user-principal")?;
+        writer.start_element("d:href")?;
+        writer.add_text(self.current_user_principal.as_str())?;
+        writer.end_element("d:href")?;
+        writer.end_element("d:current-user-principal")?;
+        writer.end_element("d:prop")?;
+        Ok(())
+    }
+}
+
+impl SerializeXml for UserProperty {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+        writer.start_element("d:prop")?;
+        writer.start_element("d:displayname")?;
+        writer.add_text(self.display_name.as_str())?;
+        writer.end_element("d:displayname")?;
+        writer.start_element("cal:calendar-home-set")?;
+        writer.start_element("d:href")?;
+        writer.add_text(self.calendar_home_set.as_str())?;
+        writer.end_element("d:href")?;
+        writer.end_element("cal:calendar-home-set")?;
+        writer.start_element("d:principal-URL")?;
+        writer.start_element("d:href")?;
+        writer.add_text(self.principal.as_str())?;
+        writer.end_element("d:href")?;
+        writer.end_element("d:principal-URL")?;
         writer.start_element("d:current-user-principal")?;
         writer.start_element("d:href")?;
         writer.add_text(self.current_user_principal.as_str())?;

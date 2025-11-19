@@ -25,6 +25,7 @@ struct SignUpBody {
     first_name: String,
     affix: Option<String>,
     last_name: String,
+    display_name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -80,11 +81,12 @@ async fn sign_up(
         first_name: Set(body.first_name.clone()),
         last_name: Set(body.last_name.clone()),
         affix: Set(body.affix.clone()),
+        display_name: Set(body.display_name.clone()),
     };
 
     let calendar = calendar::ActiveModel {
         id: Set(Uuid::new_v4()),
-        title: Set(format!("{}'s calendar", body.first_name).into()),
+        title: Set(format!("{}'s calendar", body.first_name)),
         colour: Set("#63a6d7".into()),
         owner: Set(user_id),
         ..Default::default()
@@ -124,6 +126,7 @@ mod tests {
             last_name: "Doe".into(),
             email: "john.doe@example.com".into(),
             password: "very_secure_password".into(),
+            display_name: "JohnDoe".into(),
         };
 
         let req = test::TestRequest::post()

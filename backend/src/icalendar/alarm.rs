@@ -41,26 +41,26 @@ impl Display for Alarm {
             f,
             "ACTION:{}\r\n",
             match &self {
-                Alarm::Audio(_) => "AUDIO",
-                Alarm::Display(_) => "DISPLAY",
-                Alarm::Email(_) => "EMAIL",
+                Self::Audio(_) => "AUDIO",
+                Self::Display(_) => "DISPLAY",
+                Self::Email(_) => "EMAIL",
             }
         )?;
 
         match &self {
-            Alarm::Audio(alarm) => {
+            Self::Audio(alarm) => {
                 write!(f, "TRIGGER:{}\r\n", alarm.trigger.to_icalendar_timestamp())?;
                 if_some_write_param(f, "ATTACH", &alarm.attach)?;
                 if_some_write(f, "REPEAT", &alarm.repeat)?;
                 if_some_write(f, "DURATION", &alarm.duration)?;
             }
-            Alarm::Display(alarm) => {
+            Self::Display(alarm) => {
                 write!(f, "TRIGGER:{}\r\n", alarm.trigger.to_icalendar_timestamp())?;
             }
-            Alarm::Email(alarm) => {
+            Self::Email(alarm) => {
                 write!(f, "TRIGGER:{}\r\n", alarm.trigger.to_icalendar_timestamp())?;
             }
-        };
+        }
 
         write!(f, "END:VALARM")
     }

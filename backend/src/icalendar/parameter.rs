@@ -19,13 +19,13 @@ impl Display for PartStat {
             f,
             "{}",
             match self {
-                PartStat::NeedsAction => "NEEDS-ACTION",
-                PartStat::Accepted => "ACCEPTED",
-                PartStat::Declined => "DECLINED",
-                PartStat::Tentative => "TENTATIVE",
-                PartStat::Delagated => "DELAGATED",
-                PartStat::Completed => "COMPLETED",
-                PartStat::InProgress => "IN-PROGRESS",
+                Self::NeedsAction => "NEEDS-ACTION",
+                Self::Accepted => "ACCEPTED",
+                Self::Declined => "DECLINED",
+                Self::Tentative => "TENTATIVE",
+                Self::Delagated => "DELAGATED",
+                Self::Completed => "COMPLETED",
+                Self::InProgress => "IN-PROGRESS",
             }
         )
     }
@@ -78,7 +78,7 @@ pub struct IcalParam<T> {
 }
 
 impl<T> IcalParam<T> {
-    pub fn new(value: T) -> IcalParam<T> {
+    pub fn new(value: T) -> Self {
         Self {
             alt_rep: Default::default(),
             cn: Default::default(),
@@ -136,11 +136,11 @@ impl<T: Default> Default for IcalParam<T> {
 impl<T: Display> Display for IcalParam<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(part_stat) = &self.part_stat {
-            write!(f, ";PARTSTAT={}", part_stat)?;
+            write!(f, ";PARTSTAT={part_stat}")?;
         }
 
         if let Some(fmt_type) = &self.fmt_type {
-            write!(f, ";FMTTYPE={}", fmt_type)?;
+            write!(f, ";FMTTYPE={fmt_type}")?;
         }
         write!(f, ":{}", self.value)?;
         fmt::Result::Ok(())

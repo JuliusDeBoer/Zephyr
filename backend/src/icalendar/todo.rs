@@ -25,13 +25,13 @@ impl Display for TodoStatus {
             f,
             "{}",
             match self {
-                TodoStatus::NeedsAction => "NEEDS-ACTION",
-                TodoStatus::Accepted => "ACCEPTED",
-                TodoStatus::Declined => "DECLINED",
-                TodoStatus::Tentative => "TENTATIVE",
-                TodoStatus::Delegated => "DELEGATED",
-                TodoStatus::Completed => "COMPLETED",
-                TodoStatus::InProcess => "IN-PROCESS",
+                Self::NeedsAction => "NEEDS-ACTION",
+                Self::Accepted => "ACCEPTED",
+                Self::Declined => "DECLINED",
+                Self::Tentative => "TENTATIVE",
+                Self::Delegated => "DELEGATED",
+                Self::Completed => "COMPLETED",
+                Self::InProcess => "IN-PROCESS",
             }
         )
     }
@@ -93,7 +93,7 @@ impl Display for Todo {
         if_some_write(f, "STATUS", &self.status)?;
         if_some_write(f, "SUMMARY", &self.summary)?;
         if let Some(alarm) = &self.alarm {
-            write!(f, "{}\r\n", alarm)?;
+            write!(f, "{alarm}\r\n")?;
         }
         write!(f, "END:VTODO")
     }

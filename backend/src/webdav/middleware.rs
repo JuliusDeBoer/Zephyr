@@ -84,7 +84,7 @@ where
 
         if auth.is_none() {
             return err;
-        };
+        }
 
         let auth_header = auth.unwrap().1.to_str().unwrap_or("");
         let auth_value = if let Some(stripped) = auth_header.strip_prefix("Basic ") {
@@ -96,7 +96,7 @@ where
         let decoded: Vec<String> = match BASE64_STANDARD.decode(auth_value.as_bytes()) {
             Ok(bytes) => match String::from_utf8(bytes) {
                 Ok(decoded_str) => decoded_str
-                    .split(":")
+                    .split(':')
                     .map(|v: &str| String::from(v))
                     .collect(),
                 Err(_) => {
@@ -123,31 +123,28 @@ where
 
         Box::pin(async move {
             let db_ref = db.as_ref().as_ref();
-            match validate_credentials(&email, &password, db_ref).await {
-                Ok(valid) => {
-                    if valid {
-                        let user_result: Option<IdOnly> = User::find()
-                            .filter(user::Column::Email.eq(email))
-                            .into_partial_model()
-                            .one(db_ref)
-                            .await
-                            .unwrap();
+            if let Ok(valid) = validate_credentials(&email, &password, db_ref).await {
+                if valid {
+                    let user_result: Option<IdOnly> = User::find()
+                        .filter(user::Column::Email.eq(email))
+                        .into_partial_model()
+                        .one(db_ref)
+                        .await
+                        .unwrap();
 
-                        req.request().extensions_mut().insert(UserClaims {
-                            user_id: user_result.unwrap().id,
-                        });
-                        service.call(req).await
-                    } else {
-                        let response = HttpResponse::Unauthorized()
-                            .append_header(("WWW-Authenticate", "Basic realm=\"Zephyr\""))
-                            .finish();
-                        Err(InternalError::from_response("Unauthorized", response).into())
-                    }
+                    req.request().extensions_mut().insert(UserClaims {
+                        user_id: user_result.unwrap().id,
+                    });
+                    service.call(req).await
+                } else {
+                    let response = HttpResponse::Unauthorized()
+                        .append_header(("WWW-Authenticate", "Basic realm=\"Zephyr\""))
+                        .finish();
+                    Err(InternalError::from_response("Unauthorized", response).into())
                 }
-                Err(_) => {
-                    let response = HttpResponse::InternalServerError().finish();
-                    Err(InternalError::from_response("Authentication error", response).into())
-                }
+            } else {
+                let response = HttpResponse::InternalServerError().finish();
+                Err(InternalError::from_response("Authentication error", response).into())
             }
         })
     }

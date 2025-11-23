@@ -7,7 +7,7 @@ use actix_web::{
 use argon2::password_hash;
 use hmac::digest::InvalidLength;
 
-pub fn status_error(code: StatusCode) -> EndpointError {
+pub const fn status_error(code: StatusCode) -> EndpointError {
     EndpointError::StatusCodeError(code)
 }
 
@@ -34,8 +34,8 @@ pub enum EndpointError {
 impl ResponseError for EndpointError {
     fn status_code(&self) -> StatusCode {
         match self {
-            EndpointError::InvalidLength(_) => StatusCode::BAD_REQUEST,
-            EndpointError::StatusCodeError(code) => *code,
+            Self::InvalidLength(_) => StatusCode::BAD_REQUEST,
+            Self::StatusCodeError(code) => *code,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

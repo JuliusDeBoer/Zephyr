@@ -6,7 +6,7 @@ use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
-use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::*};
+use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::{EntityTrait, ActiveModelBehavior, ActiveModelTrait, Related, ActiveEnum, Set}};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;

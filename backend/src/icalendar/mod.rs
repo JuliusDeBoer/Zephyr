@@ -67,9 +67,9 @@ pub fn if_some_write(
     val: &Option<impl Display>,
 ) -> fmt::Result {
     if let Some(val) = val {
-        let line = format!("{}:{}", name, val);
+        let line = format!("{name}:{val}");
         let wrapped = wrap_icalendar_line(&line, 75);
-        return write!(f, "{}\r\n", wrapped);
+        return write!(f, "{wrapped}\r\n");
     }
     fmt::Result::Ok(())
 }
@@ -82,9 +82,9 @@ pub fn if_some_write_param<T: Display>(
     val: &Option<IcalParam<T>>,
 ) -> fmt::Result {
     if let Some(val) = val {
-        let line = format!("{}{}", name, val);
+        let line = format!("{name}{val}");
         let wrapped = wrap_icalendar_line(&line, 75);
-        return write!(f, "{}\r\n", wrapped);
+        return write!(f, "{wrapped}\r\n");
     }
     fmt::Result::Ok(())
 }
@@ -97,7 +97,7 @@ fn if_some_write_date(
     if let Some(val) = val {
         let line = format!("{}:{}", name, val.to_icalendar_timestamp());
         let wrapped = wrap_icalendar_line(&line, 75);
-        return write!(f, "{}\r\n", wrapped);
+        return write!(f, "{wrapped}\r\n");
     }
     fmt::Result::Ok(())
 }

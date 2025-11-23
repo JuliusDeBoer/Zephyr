@@ -19,9 +19,9 @@ impl Display for EventStatus {
             f,
             "{}",
             match self {
-                EventStatus::Tentative => "TENTATIVE",
-                EventStatus::Confirmed => "CONFIRMED",
-                EventStatus::Cancelled => "CANCELLED",
+                Self::Tentative => "TENTATIVE",
+                Self::Confirmed => "CONFIRMED",
+                Self::Cancelled => "CANCELLED",
             }
         )
     }
@@ -95,16 +95,13 @@ impl Body for Event {
         self: Pin<&mut Self>,
         _cx: &mut Context<'_>,
     ) -> Poll<Option<Result<hyper::body::Frame<Self::Data>, Self::Error>>> {
-        Poll::Ready(match self.serialized {
-            true => {
-                self.get_mut().serialized = false;
-                None
-            }
-            false => {
-                let out = self.to_string();
-                self.get_mut().serialized = true;
-                Some(Ok(Frame::data(out.into())))
-            }
+        Poll::Ready(if self.serialized {
+            self.get_mut().serialized = false;
+            None
+        } else {
+            let out = self.to_string();
+            self.get_mut().serialized = true;
+            Some(Ok(Frame::data(out.into())))
         })
     }
 }

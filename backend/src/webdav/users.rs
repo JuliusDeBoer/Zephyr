@@ -13,7 +13,7 @@ use crate::{
     util::status_error,
     webdav::{
         middleware::UserClaims,
-        response::{CalendarProperty, NameOnlyProperty, Property, ResourceType, UserProperty},
+        response::{CalendarProperty, NameOnlyProperty, Property, ResourceType},
         xml::XmlWriter,
     },
 };
@@ -68,7 +68,7 @@ async fn handle_propfind(
                 status_code: StatusCode::OK,
                 prop: Property::Calendar(CalendarProperty {
                     display_name: v.title.clone(),
-                    description: "".into(),
+                    description: String::new(),
                 }),
             })
             .collect();
@@ -91,7 +91,7 @@ async fn handle_propfind(
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),
-                properties: properties,
+                properties,
             }],
         },
     };

@@ -1,4 +1,4 @@
-//! At this point a temporary file to figure out how to implement WebDAV and CalDAV
+//! At this point a temporary file to figure out how to implement `WebDAV` and `CalDAV`
 
 use actix_web::{
     HttpRequest, HttpResponse,

@@ -3,7 +3,7 @@ use eyre::{Context, Result};
 use rand::{Rng, distr::Alphanumeric, rng};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
-    entity::*,
+    entity::{PartialModelTrait, ActiveModelBehavior, ActiveModelTrait, Set},
 };
 
 use crate::entity::instance_setting;
@@ -46,7 +46,7 @@ pub async fn get_jwt_signing_key(db: &DatabaseConnection) -> eyre::Result<String
         .context("Error while attempting to obtain AUTH_JWT_SIGNING_KEY from instance settings")?;
 
     if let Some(setting) = setting {
-        return Ok(setting.value.clone());
+        return Ok(setting.value);
     }
 
     println!("No JWT signing key present. Generating one...");

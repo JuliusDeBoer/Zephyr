@@ -36,10 +36,10 @@ pub enum Property {
 impl SerializeXml for Property {
     fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
         match self {
-            Property::Root(v) => v.write_xml(writer),
-            Property::User(v) => v.write_xml(writer),
-            Property::NameOnly(v) => v.write_xml(writer),
-            Property::Calendar(v) => v.write_xml(writer),
+            Self::Root(v) => v.write_xml(writer),
+            Self::User(v) => v.write_xml(writer),
+            Self::NameOnly(v) => v.write_xml(writer),
+            Self::Calendar(v) => v.write_xml(writer),
         }
     }
 }
@@ -117,7 +117,7 @@ impl SerializeXml for NameOnlyProperty {
             ResourceType::Calendar => {
                 writer.empty_element("cal:calendar")?;
             }
-        };
+        }
         writer.end_element("d:resourcetype")?;
         writer.start_element("d:displayname")?;
         writer.add_text(self.display_name.as_str())?;
@@ -178,7 +178,7 @@ impl SerializeXml for RootProperty {
             ResourceType::Calendar => {
                 writer.empty_element("cal:calendar")?;
             }
-        };
+        }
         writer.end_element("d:resourcetype")?;
         writer.start_element("d:displayname")?;
         writer.add_text(self.display_name.as_str())?;

@@ -13,7 +13,10 @@ use crate::{
     webdav::{
         middleware::UserClaims,
         principals,
-        response::{MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty},
+        response::{
+            MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty,
+            WebDavPermissions,
+        },
         users,
         xml::{SerializeXml, XmlWriter},
     },
@@ -29,8 +32,11 @@ async fn handle_options() -> HttpResponse {
 
 async fn handle_propfind(
     req: HttpRequest,
+    body: String,
     user_claims: web::ReqData<UserClaims>,
 ) -> Result<HttpResponse, EndpointError> {
+    dbg!(body);
+
     let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
         Some(v) => String::from(v.1.to_str()?).parse()?,
         None => return Err(EndpointError::StatusCodeError(StatusCode::FORBIDDEN)),
@@ -46,12 +52,21 @@ async fn handle_propfind(
                     prop: Property::Root(RootProperty {
                         resource_type: ResourceType::Collection,
                         display_name: "CalDAV".into(),
-                        created_at: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
-                        last_modified: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
+                        created_at: DateTime::from_str("2025-11-02 14:30:00Z")
+                            .expect("Could not parse string"),
+                        last_modified: DateTime::from_str("2025-11-01 10:00:00Z")
+                            .expect("Could not parse string"),
                         current_user_principal: format!(
                             "/caldav/principals/users/{}/",
                             user_claims.user_id
                         ),
+                        permissions: WebDavPermissions {
+                            // TODO(Julius): This isn't secure...
+                            read: true,
+                            write: true,
+                            write_content: true,
+                        },
+                        ctag: "AAA".into(),
                     }),
                 }],
             }],
@@ -59,7 +74,7 @@ async fn handle_propfind(
     };
 
     let mut writer = XmlWriter::new();
-    body.write_xml(&mut writer).unwrap();
+    body.write_xml(&mut writer)?;
     Ok(HttpResponse::MultiStatus()
         .append_header(("Content-Type", "application/xml"))
         .body(writer.into_bytes()))

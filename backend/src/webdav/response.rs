@@ -1,6 +1,7 @@
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Local, Utc};
 use eyre::Result;
+use serde::Serialize;
 
 use super::xml::{SerializeXml, WEBDAV_NAMESPACES, XmlWriter};
 
@@ -51,6 +52,15 @@ pub struct RootProperty {
     pub last_modified: DateTime<Utc>,
     pub created_at: DateTime<Local>,
     pub current_user_principal: String,
+    pub permissions: WebDavPermissions,
+    pub ctag: String,
+}
+
+#[derive(Debug)]
+pub struct WebDavPermissions {
+    pub read: bool,
+    pub write: bool,
+    pub write_content: bool,
 }
 
 #[derive(Debug)]
@@ -166,6 +176,29 @@ impl SerializeXml for PropStat {
     }
 }
 
+impl SerializeXml for WebDavPermissions {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+        writer.start_element("d:current-user-privilege-set")?;
+        if self.read {
+            writer.start_element("d:privilege")?;
+            writer.empty_element("d:read")?;
+            writer.end_element("d:privilege")?;
+        }
+        if self.write {
+            writer.start_element("d:privilege")?;
+            writer.empty_element("d:write")?;
+            writer.end_element("d:privilege")?;
+        }
+        if self.write_content {
+            writer.start_element("d:privilege")?;
+            writer.empty_element("d:write-content")?;
+            writer.end_element("d:privilege")?;
+        }
+        writer.end_element("d:current-user-privilege-set")?;
+        Ok(())
+    }
+}
+
 impl SerializeXml for RootProperty {
     fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
         writer.start_element("d:prop")?;
@@ -200,6 +233,7 @@ impl SerializeXml for RootProperty {
         writer.add_text(self.current_user_principal.as_str())?;
         writer.end_element("d:href")?;
         writer.end_element("d:current-user-principal")?;
+        self.permissions.write_xml(writer)?;
         writer.end_element("d:prop")?;
         Ok(())
     }

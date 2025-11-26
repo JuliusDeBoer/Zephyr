@@ -9,6 +9,7 @@ members = [".", "migration"]
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
+future-not-send = "allow"
 unwrap_used = "warn"
 
 [dependencies]

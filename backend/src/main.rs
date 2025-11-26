@@ -43,13 +43,14 @@ async fn main() -> std::io::Result<()> {
     })
     .bind(("127.0.0.1", 3000));
 
-    if server.is_err() {
-        println!("Could not bind to 127.0.0.1:3000");
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::AddrInUse,
-            "Could not bind to 127.0.0.1:3000",
-        ));
+    match server {
+        Ok(s) => s.run().await,
+        Err(e) => {
+            println!("Could not bind to 127.0.0.1:3000: {e}");
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::AddrInUse,
+                "Could not bind to 127.0.0.1:3000",
+            ));
+        }
     }
-
-    server.unwrap().run().await
 }

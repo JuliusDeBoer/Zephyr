@@ -6,7 +6,10 @@ use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
-use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter, entity::{EntityTrait, ActiveModelBehavior, ActiveModelTrait, Related, ActiveEnum, Set}};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, QueryFilter,
+    entity::{ActiveEnum, ActiveModelBehavior, ActiveModelTrait, EntityTrait, Related, Set},
+};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;
@@ -49,7 +52,7 @@ async fn login(
             .filter(user::Column::Email.eq(&body.email))
             .one(db)
             .await?
-            .unwrap();
+            .expect("Could not find user");
 
         let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(db).await?.as_bytes())?;
         let mut claims = BTreeMap::new();

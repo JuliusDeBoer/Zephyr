@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, post, web};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
+use rootcause::prelude::ResultExt;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, QueryFilter,
     entity::{ActiveModelTrait, EntityTrait, Set},
@@ -18,7 +20,7 @@ use crate::entity::calendar;
 use crate::entity::prelude::User;
 use crate::entity::user;
 use crate::jwt::{get_jwt_signing_key, validate_credentials};
-use crate::util::EndpointError;
+use crate::util::ApiError;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -42,24 +44,26 @@ struct LoginBody {
 async fn login(
     db: web::Data<Arc<DatabaseConnection>>,
     body: web::Json<LoginBody>,
-) -> Result<HttpResponse, EndpointError> {
+) -> Result<HttpResponse, ApiError> {
     let db = db.as_ref().as_ref();
 
-    let valid = validate_credentials(&body.email, &body.password, db).await?;
+    let valid = validate_credentials(&body.email, &body.password, db)
+        .await
+        .context("Could not validate credentials")?;
 
     if valid {
         let user = User::find()
             .filter(user::Column::Email.eq(&body.email))
             .one(db)
             .await?
-            .expect("Could not find user");
+            .ok_or_else(|| ApiError::new("Could not find user", StatusCode::NOT_FOUND))?;
 
         let key: Hmac<Sha256> = Hmac::new_from_slice(get_jwt_signing_key(db).await?.as_bytes())?;
         let mut claims = BTreeMap::new();
         claims.insert("sub", user.id.to_string());
         Ok(HttpResponse::Ok().body(claims.sign_with_key(&key)?))
     } else {
-        Ok(HttpResponse::BadRequest().finish())
+        Ok(HttpResponse::Unauthorized().finish())
     }
 }
 
@@ -67,7 +71,7 @@ async fn login(
 async fn sign_up(
     body: web::Json<SignUpBody>,
     db: web::Data<Arc<DatabaseConnection>>,
-) -> Result<HttpResponse, EndpointError> {
+) -> Result<HttpResponse, ApiError> {
     let db = db.as_ref().as_ref();
 
     let salt = SaltString::generate(&mut OsRng);

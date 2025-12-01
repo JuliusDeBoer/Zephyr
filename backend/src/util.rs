@@ -1,57 +1,60 @@
-use std::num::ParseIntError;
+use std::fmt::Display;
 
-use actix_web::{
-    ResponseError,
-    http::{StatusCode, header::ToStrError},
-};
-use argon2::password_hash;
-use hmac::digest::InvalidLength;
-use rootcause::Report;
+use actix_web::{HttpResponse, ResponseError, body::BoxBody, http::StatusCode};
+use rootcause::{Report, report};
 
-pub const fn status_error(code: StatusCode) -> EndpointError {
-    EndpointError::StatusCode(code)
+#[derive(Debug)]
+pub struct ApiError {
+    pub report: Report,
+    pub status_code: StatusCode,
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum EndpointError {
-    #[error("{0}")]
-    Report(Report),
-
-    #[error("{0}")]
-    StatusCode(StatusCode),
-
-    #[error(transparent)]
-    DatabaseError(#[from] sea_orm::DbErr),
-    #[error(transparent)]
-    InvalidLength(#[from] InvalidLength),
-    #[error(transparent)]
-    JwtError(#[from] jwt::Error),
-    #[error(transparent)]
-    PasswordHashError(#[from] password_hash::Error),
-    #[error(transparent)]
-    ParseIntError(#[from] ParseIntError),
-    #[error(transparent)]
-    ToStrError(#[from] ToStrError),
-}
-
-impl From<Report<dyn std::any::Any>> for EndpointError {
-    fn from(report: Report) -> Self {
-        Self::Report(report)
+impl ApiError {
+    pub fn new(reason: &str, status_code: StatusCode) -> Self {
+        Self {
+            report: report!("{}", reason),
+            status_code,
+        }
     }
 }
 
-impl From<Report<Self>> for EndpointError {
-    fn from(report: Report<Self>) -> Self {
-        Self::Report(report.into())
+pub trait WithStatusCode<T> {
+    fn with_status(self, code: StatusCode) -> Result<T, ApiError>;
+}
+
+impl<T, E> WithStatusCode<T> for Result<T, E>
+where
+    E: Into<Report>,
+{
+    fn with_status(self, code: StatusCode) -> Result<T, ApiError> {
+        self.map_err(|e| ApiError {
+            report: e.into(),
+            status_code: code,
+        })
     }
 }
 
-impl ResponseError for EndpointError {
+impl Display for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}] {}", self.status_code.as_u16(), self.report)
+    }
+}
+
+impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
-        match self {
-            Self::InvalidLength(_) => StatusCode::BAD_REQUEST,
-            Self::StatusCode(code) => *code,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        self.status_code
+    }
+
+    fn error_response(&self) -> HttpResponse<BoxBody> {
+        HttpResponse::build(self.status_code).body(format!("{}", self.report))
+    }
+}
+
+impl<E: Into<Report>> From<E> for ApiError {
+    fn from(error: E) -> Self {
+        Self {
+            report: error.into(),
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

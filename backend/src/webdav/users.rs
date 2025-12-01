@@ -5,12 +5,13 @@ use actix_web::{
     http::{Method, StatusCode},
     web,
 };
+use rootcause::report;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use uuid::Uuid;
 
 use crate::{
     entity::prelude::User,
-    util::status_error,
+    util::ApiError,
     webdav::{
         middleware::UserClaims,
         response::{CalendarProperty, NameOnlyProperty, Property, ResourceType},
@@ -19,7 +20,7 @@ use crate::{
 };
 use crate::{entity::user, webdav::xml::SerializeXml};
 use crate::{
-    util::EndpointError,
+    util::WithStatusCode,
     webdav::response::{MultiStatusResponse, PropStat, Response},
 };
 
@@ -28,32 +29,32 @@ async fn handle_propfind(
     req: HttpRequest,
     db: web::Data<Arc<DatabaseConnection>>,
     user_claims: web::ReqData<UserClaims>,
-) -> Result<HttpResponse, EndpointError> {
+) -> Result<HttpResponse, ApiError> {
     let db = db.as_ref().as_ref();
 
-    let user_id = match req.match_info().get("user_id") {
-        Some(v) => v,
-        None => return Err(status_error(StatusCode::NOT_FOUND)),
-    };
+    let user_id = req
+        .match_info()
+        .get("user_id")
+        .ok_or_else(|| report!("Coult not find user"))
+        .with_status(StatusCode::NOT_FOUND)?;
 
-    // NOTE(Julius): I hate this.
-    let user_id = match Uuid::from_str(user_id) {
-        Ok(v) => v,
-        Err(_) => return Err(status_error(StatusCode::BAD_REQUEST)),
-    };
+    let user_id = Uuid::from_str(user_id).with_status(StatusCode::BAD_REQUEST)?;
 
-    let user = match User::find()
+    let user = User::find()
         .filter(user::Column::Id.eq(user_id))
         .one(db)
         .await?
-    {
-        Some(v) => v,
-        None => return Err(status_error(StatusCode::NOT_FOUND)),
-    };
+        .ok_or_else(|| report!("Could not find user"))
+        .with_status(StatusCode::NOT_FOUND)?;
 
     let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
         Some(v) => String::from(v.1.to_str()?).parse()?,
-        None => return Err(status_error(StatusCode::FORBIDDEN)),
+        None => {
+            return Err(ApiError::new(
+                "Invalid `Depth` header",
+                StatusCode::FORBIDDEN,
+            ));
+        }
     };
 
     let mut calendars = if depth >= 1 {
@@ -87,7 +88,12 @@ async fn handle_propfind(
     properties.append(&mut calendars);
 
     let body = match depth {
-        i32::MIN..0 => return Err(status_error(StatusCode::BAD_REQUEST)),
+        i32::MIN..0 => {
+            return Err(ApiError::new(
+                "Invalid `Depth` header",
+                StatusCode::BAD_REQUEST,
+            ));
+        }
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),

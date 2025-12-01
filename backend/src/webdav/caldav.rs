@@ -6,11 +6,10 @@ use actix_web::{
     options, web,
 };
 use chrono::DateTime;
-use rootcause::{Report, report};
 use std::str::FromStr;
 
 use crate::{
-    util::EndpointError,
+    util::ApiError,
     webdav::{
         middleware::UserClaims,
         principals,
@@ -35,19 +34,25 @@ async fn handle_propfind(
     req: HttpRequest,
     body: String,
     user_claims: web::ReqData<UserClaims>,
-) -> Result<HttpResponse, EndpointError> {
+) -> Result<HttpResponse, ApiError> {
     dbg!(body);
 
     let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
         Some(v) => String::from(v.1.to_str()?).parse()?,
         None => {
-            return Err(EndpointError::StatusCode(StatusCode::FORBIDDEN));
+            return Err(ApiError::new(
+                "Invalid `Depth` header",
+                StatusCode::FORBIDDEN,
+            ));
         }
     };
 
     let body = match depth {
         i32::MIN..0 => {
-            return Err(EndpointError::StatusCode(StatusCode::BAD_REQUEST));
+            return Err(ApiError::new(
+                "Invalid `Depth` header",
+                StatusCode::BAD_REQUEST,
+            ));
         }
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
@@ -57,10 +62,8 @@ async fn handle_propfind(
                     prop: Property::Root(RootProperty {
                         resource_type: ResourceType::Collection,
                         display_name: "CalDAV".into(),
-                        created_at: DateTime::from_str("2025-11-02 14:30:00Z")
-                            .expect("Could not parse string"),
-                        last_modified: DateTime::from_str("2025-11-01 10:00:00Z")
-                            .expect("Could not parse string"),
+                        created_at: DateTime::from_str("2025-11-02 14:30:00Z")?,
+                        last_modified: DateTime::from_str("2025-11-01 10:00:00Z")?,
                         current_user_principal: format!(
                             "/caldav/principals/users/{}/",
                             user_claims.user_id

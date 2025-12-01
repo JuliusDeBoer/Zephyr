@@ -1,8 +1,8 @@
-use eyre::Result;
 use quick_xml::{
     Writer,
     events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event},
 };
+use rootcause::Report;
 
 /// A collection of namespaces used when serializing to XML
 pub static WEBDAV_NAMESPACES: &[(&str, &str)] = &[
@@ -11,7 +11,7 @@ pub static WEBDAV_NAMESPACES: &[(&str, &str)] = &[
 ];
 
 pub trait SerializeXml {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()>;
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report>;
 }
 
 pub struct XmlWriter {
@@ -32,13 +32,17 @@ impl XmlWriter {
         Self { writer }
     }
 
-    pub fn start_element(&mut self, name: &str) -> Result<()> {
+    pub fn start_element(&mut self, name: &str) -> Result<(), Report> {
         self.writer
             .write_event(Event::Start(BytesStart::new(name)))?;
         Ok(())
     }
 
-    pub fn start_element_with_attrs(&mut self, name: &str, attrs: &[(&str, &str)]) -> Result<()> {
+    pub fn start_element_with_attrs(
+        &mut self,
+        name: &str,
+        attrs: &[(&str, &str)],
+    ) -> Result<(), Report> {
         let mut element = BytesStart::new(name);
 
         for (key, value) in attrs {
@@ -49,13 +53,17 @@ impl XmlWriter {
         Ok(())
     }
 
-    pub fn empty_element(&mut self, name: &str) -> Result<()> {
+    pub fn empty_element(&mut self, name: &str) -> Result<(), Report> {
         self.writer
             .write_event(Event::Empty(BytesStart::new(name)))?;
         Ok(())
     }
 
-    pub fn empty_element_with_attrs(&mut self, name: &str, attrs: &[(&str, &str)]) -> Result<()> {
+    pub fn empty_element_with_attrs(
+        &mut self,
+        name: &str,
+        attrs: &[(&str, &str)],
+    ) -> Result<(), Report> {
         let mut element = BytesStart::new(name);
 
         for (key, value) in attrs {
@@ -66,12 +74,12 @@ impl XmlWriter {
         Ok(())
     }
 
-    pub fn end_element(&mut self, name: &str) -> Result<()> {
+    pub fn end_element(&mut self, name: &str) -> Result<(), Report> {
         self.writer.write_event(Event::End(BytesEnd::new(name)))?;
         Ok(())
     }
 
-    pub fn add_text(&mut self, content: &str) -> Result<()> {
+    pub fn add_text(&mut self, content: &str) -> Result<(), Report> {
         self.writer
             .write_event(Event::Text(BytesText::new(content)))?;
         Ok(())

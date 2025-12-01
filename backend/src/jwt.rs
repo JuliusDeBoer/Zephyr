@@ -1,6 +1,6 @@
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use eyre::{Context, Result};
 use rand::{Rng, distr::Alphanumeric, rng};
+use rootcause::{Report, prelude::ResultExt};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
     entity::{ActiveModelTrait, Set},
@@ -20,7 +20,7 @@ pub async fn validate_credentials(
     email: &String,
     password: &String,
     db: &DatabaseConnection,
-) -> Result<bool> {
+) -> Result<bool, Report> {
     let user_result: Option<PasswordOnly> = User::find()
         .filter(user::Column::Email.eq(email))
         .into_partial_model()
@@ -38,7 +38,7 @@ pub async fn validate_credentials(
 }
 
 /// Returns the signing key for authorization tokens. And creates one if needed.
-pub async fn get_jwt_signing_key(db: &DatabaseConnection) -> eyre::Result<String> {
+pub async fn get_jwt_signing_key(db: &DatabaseConnection) -> Result<String, Report> {
     let setting = InstanceSetting::find()
         .filter(instance_setting::Column::Key.eq("AUTH_JWT_SIGNING_KEY"))
         .one(db)

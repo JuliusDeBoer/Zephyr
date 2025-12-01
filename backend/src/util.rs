@@ -6,36 +6,51 @@ use actix_web::{
 };
 use argon2::password_hash;
 use hmac::digest::InvalidLength;
+use rootcause::Report;
 
 pub const fn status_error(code: StatusCode) -> EndpointError {
-    EndpointError::StatusCodeError(code)
+    EndpointError::StatusCode(code)
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum EndpointError {
+    #[error("{0}")]
+    Report(Report),
+
+    #[error("{0}")]
+    StatusCode(StatusCode),
+
     #[error(transparent)]
-    UnexpectedError(#[from] eyre::Error),
-    #[error("{0}")]
     DatabaseError(#[from] sea_orm::DbErr),
-    #[error("{0}")]
+    #[error(transparent)]
     InvalidLength(#[from] InvalidLength),
-    #[error("{0}")]
+    #[error(transparent)]
     JwtError(#[from] jwt::Error),
-    #[error("{0}")]
+    #[error(transparent)]
     PasswordHashError(#[from] password_hash::Error),
-    #[error("{0}")]
+    #[error(transparent)]
     ParseIntError(#[from] ParseIntError),
-    #[error("{0}")]
+    #[error(transparent)]
     ToStrError(#[from] ToStrError),
-    #[error("{0}")]
-    StatusCodeError(StatusCode),
+}
+
+impl From<Report<dyn std::any::Any>> for EndpointError {
+    fn from(report: Report) -> Self {
+        Self::Report(report)
+    }
+}
+
+impl From<Report<Self>> for EndpointError {
+    fn from(report: Report<Self>) -> Self {
+        Self::Report(report.into())
+    }
 }
 
 impl ResponseError for EndpointError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidLength(_) => StatusCode::BAD_REQUEST,
-            Self::StatusCodeError(code) => *code,
+            Self::StatusCode(code) => *code,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

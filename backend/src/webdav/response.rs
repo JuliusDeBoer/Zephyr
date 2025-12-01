@@ -1,6 +1,6 @@
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Local, Utc};
-use eyre::Result;
+use rootcause::Report;
 
 use super::xml::{SerializeXml, WEBDAV_NAMESPACES, XmlWriter};
 
@@ -34,7 +34,7 @@ pub enum Property {
 }
 
 impl SerializeXml for Property {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         match self {
             Self::Root(v) => v.write_xml(writer),
             Self::User(v) => v.write_xml(writer),
@@ -90,7 +90,7 @@ pub enum ResourceType {
 }
 
 impl SerializeXml for MultiStatusResponse {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element_with_attrs("d:multistatus", WEBDAV_NAMESPACES)?;
         for response in self.responses {
             response.write_xml(writer)?;
@@ -101,7 +101,7 @@ impl SerializeXml for MultiStatusResponse {
 }
 
 impl SerializeXml for Response {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:response")?;
         writer.start_element("d:href")?;
         writer.add_text(self.href.as_str())?;
@@ -115,7 +115,7 @@ impl SerializeXml for Response {
 }
 
 impl SerializeXml for NameOnlyProperty {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:prop")?;
         writer.start_element("d:resourcetype")?;
         match self.resource_type {
@@ -137,7 +137,7 @@ impl SerializeXml for NameOnlyProperty {
 }
 
 impl SerializeXml for CalendarProperty {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:prop")?;
 
         // NOTE(Julius): It might be worth it to allow changing these
@@ -164,7 +164,7 @@ impl SerializeXml for CalendarProperty {
 }
 
 impl SerializeXml for PropStat {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:propstat")?;
         self.prop.write_xml(writer)?;
         writer.start_element("d:status")?;
@@ -176,7 +176,7 @@ impl SerializeXml for PropStat {
 }
 
 impl SerializeXml for WebDavPermissions {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:current-user-privilege-set")?;
         if self.read {
             writer.start_element("d:privilege")?;
@@ -199,7 +199,7 @@ impl SerializeXml for WebDavPermissions {
 }
 
 impl SerializeXml for RootProperty {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:prop")?;
         writer.start_element("d:resourcetype")?;
         match self.resource_type {
@@ -239,7 +239,7 @@ impl SerializeXml for RootProperty {
 }
 
 impl SerializeXml for UserProperty {
-    fn write_xml(self, writer: &mut XmlWriter) -> Result<()> {
+    fn write_xml(self, writer: &mut XmlWriter) -> Result<(), Report> {
         writer.start_element("d:prop")?;
         writer.start_element("d:displayname")?;
         writer.add_text(self.display_name.as_str())?;

@@ -5,6 +5,7 @@ use actix_web::{
     http::{Method, StatusCode},
     web,
 };
+use rootcause::{Report, bail, report};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use uuid::Uuid;
 
@@ -31,13 +32,13 @@ async fn handle_propfind(
 
     let user_id = match req.match_info().get("user_id") {
         Some(v) => v,
-        None => return Err(status_error(StatusCode::NOT_FOUND)),
+        None => bail!(status_error(StatusCode::NOT_FOUND)),
     };
 
     // NOTE(Julius): I hate this.
     let user_id = match Uuid::from_str(user_id) {
         Ok(v) => v,
-        Err(_) => return Err(status_error(StatusCode::BAD_REQUEST)),
+        Err(_) => bail!(status_error(StatusCode::BAD_REQUEST)),
     };
 
     let user = match User::find()
@@ -46,16 +47,16 @@ async fn handle_propfind(
         .await?
     {
         Some(v) => v,
-        None => return Err(status_error(StatusCode::NOT_FOUND)),
+        None => bail!(status_error(StatusCode::NOT_FOUND)),
     };
 
     let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
         Some(v) => String::from(v.1.to_str()?).parse()?,
-        None => return Err(status_error(StatusCode::FORBIDDEN)),
+        None => bail!(status_error(StatusCode::FORBIDDEN)),
     };
 
     let body = match depth {
-        i32::MIN..0 => return Err(status_error(StatusCode::BAD_REQUEST)),
+        i32::MIN..0 => bail!(status_error(StatusCode::BAD_REQUEST)),
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),

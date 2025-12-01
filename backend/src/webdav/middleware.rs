@@ -7,7 +7,6 @@ use actix_web::{
     web,
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
-use eyre::Result;
 use futures_util::future::LocalBoxFuture;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,

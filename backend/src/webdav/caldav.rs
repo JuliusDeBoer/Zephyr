@@ -6,6 +6,7 @@ use actix_web::{
     options, web,
 };
 use chrono::DateTime;
+use rootcause::{Report, report};
 use std::str::FromStr;
 
 use crate::{
@@ -39,11 +40,15 @@ async fn handle_propfind(
 
     let depth: i32 = match req.headers().iter().find(|h| h.0 == "Depth") {
         Some(v) => String::from(v.1.to_str()?).parse()?,
-        None => return Err(EndpointError::StatusCodeError(StatusCode::FORBIDDEN)),
+        None => {
+            return Err(EndpointError::StatusCode(StatusCode::FORBIDDEN));
+        }
     };
 
     let body = match depth {
-        i32::MIN..0 => return Err(EndpointError::StatusCodeError(StatusCode::BAD_REQUEST)),
+        i32::MIN..0 => {
+            return Err(EndpointError::StatusCode(StatusCode::BAD_REQUEST));
+        }
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),
@@ -161,9 +166,10 @@ mod test {
         };
 
         let mut writer = XmlWriter::new_with_indent();
-        body.write_xml(&mut writer).unwrap();
+        body.write_xml(&mut writer)
+            .expect("Could not serialize body");
         let bytes: &[u8] = &writer.into_bytes();
-        let result = std::str::from_utf8(bytes).unwrap();
+        let result = std::str::from_utf8(bytes).expect("Could not parse body");
 
         assert_eq!(result, expected);
     }

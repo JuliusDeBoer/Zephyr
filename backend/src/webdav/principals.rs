@@ -22,6 +22,7 @@ use crate::{
     webdav::response::{MultiStatusResponse, PropStat, Response},
 };
 
+#[allow(clippy::manual_let_else)]
 async fn handle_propfind(
     req: HttpRequest,
     db: web::Data<Arc<DatabaseConnection>>,
@@ -72,7 +73,7 @@ async fn handle_propfind(
     };
 
     let mut writer = XmlWriter::new();
-    body.write_xml(&mut writer).unwrap();
+    body.write_xml(&mut writer)?;
     Ok(HttpResponse::MultiStatus()
         .append_header(("Content-Type", "application/xml"))
         .body(writer.into_bytes()))
@@ -82,7 +83,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route(
         "principals/users/{user_id}",
         web::route()
-            .method(Method::from_str("PROPFIND").unwrap())
+            .method(Method::from_str("PROPFIND").expect("Could not create PROPFIND method"))
             .to(handle_propfind),
     );
 }

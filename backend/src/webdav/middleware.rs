@@ -86,12 +86,17 @@ where
             return err;
         }
 
-        let auth_header = auth.unwrap().1.to_str().unwrap_or("");
-        let auth_value = if let Some(stripped) = auth_header.strip_prefix("Basic ") {
-            stripped
-        } else {
-            auth_header
-        };
+        let auth_header = auth
+            // NOTE(Julius): This error never happends since we already made
+            //               sure the value is `Some()`
+            .expect("Could not get auth header")
+            .1
+            .to_str()
+            .unwrap_or("");
+
+        let auth_value = auth_header
+            .strip_prefix("Basic ")
+            .map_or(auth_header, |stripped| stripped);
 
         let decoded: Vec<String> = match BASE64_STANDARD.decode(auth_value.as_bytes()) {
             Ok(bytes) => match String::from_utf8(bytes) {
@@ -114,7 +119,7 @@ where
 
         let db = req
             .app_data::<web::Data<Arc<DatabaseConnection>>>()
-            .unwrap()
+            .expect("Could not get database connection")
             .clone();
 
         let service = self.service.clone();
@@ -130,10 +135,10 @@ where
                         .into_partial_model()
                         .one(db_ref)
                         .await
-                        .unwrap();
+                        .expect("Unexpected Database Error");
 
                     req.request().extensions_mut().insert(UserClaims {
-                        user_id: user_result.unwrap().id,
+                        user_id: user_result.expect("Could find user").id,
                     });
                     service.call(req).await
                 } else {

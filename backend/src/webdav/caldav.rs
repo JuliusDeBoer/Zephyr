@@ -84,7 +84,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(handle_options).route(
         "",
         web::route()
-            .method(Method::from_str("PROPFIND").unwrap())
+            .method(Method::from_str("PROPFIND").expect("Could not create PROPFIND method"))
             .to(handle_propfind),
     );
 
@@ -119,6 +119,17 @@ mod test {
                 <d:current-user-principal>
                     <d:href>/caldav/principals/user123/</d:href>
                 </d:current-user-principal>
+                <d:current-user-privilege-set>
+                    <d:privilege>
+                        <d:read/>
+                    </d:privilege>
+                    <d:privilege>
+                        <d:write/>
+                    </d:privilege>
+                    <d:privilege>
+                        <d:write-content/>
+                    </d:privilege>
+                </d:current-user-privilege-set>
             </d:prop>
             <d:status>HTTP/1.1 200 OK</d:status>
         </d:propstat>
@@ -133,9 +144,17 @@ mod test {
                     prop: Property::Root(RootProperty {
                         resource_type: ResourceType::Collection,
                         display_name: "CalDAV".into(),
-                        created_at: DateTime::from_str("2025-11-01 10:00:00Z").unwrap(),
-                        last_modified: DateTime::from_str("2025-11-02 14:30:00Z").unwrap(),
+                        created_at: DateTime::from_str("2025-11-01 10:00:00Z")
+                            .expect("Could not parse date"),
+                        last_modified: DateTime::from_str("2025-11-02 14:30:00Z")
+                            .expect("Could not parse date"),
                         current_user_principal: "/caldav/principals/user123/".into(),
+                        ctag: "AAA".into(),
+                        permissions: WebDavPermissions {
+                            read: true,
+                            write: true,
+                            write_content: true,
+                        },
                     }),
                 }],
             }],

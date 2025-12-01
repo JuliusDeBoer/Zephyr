@@ -7,6 +7,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub enum EventStatus {
     Tentative,
     Confirmed,
@@ -62,7 +63,7 @@ impl Display for Event {
             .as_str(),
         )?;
 
-        if_some_write(f, "ORGANIZER", &self.organizer)?;
+        if_some_write(f, "ORGANIZER", self.organizer.clone())?;
 
         if let Some(start) = &self.start {
             write!(
@@ -80,9 +81,9 @@ impl Display for Event {
             )?;
         }
 
-        if_some_write(f, "STATUS", &self.status)?;
-        if_some_write(f, "CATEGORIES", &self.catagory)?;
-        if_some_write(f, "SUMMARY", &self.summary)?;
+        if_some_write(f, "STATUS", self.status.clone())?;
+        if_some_write(f, "CATEGORIES", self.catagory.clone())?;
+        if_some_write(f, "SUMMARY", self.summary.clone())?;
         write!(f, "END:VEVENT")
     }
 }
@@ -134,10 +135,11 @@ mod test {
     #[test]
     fn serialize_full_event() {
         let event = Event {
-            uid: Uuid::from_str("5aa5c392-fd79-4d24-adc9-8349c49b0b71").unwrap(),
-            timestamp: DateTime::from_timestamp_secs(836481600).unwrap(),
-            start: Some(DateTime::from_timestamp_secs(843057000).unwrap()),
-            end: Some(DateTime::from_timestamp_secs(843256800).unwrap()),
+            uid: Uuid::from_str("5aa5c392-fd79-4d24-adc9-8349c49b0b71")
+                .expect("Could not parse UUIDv4"),
+            timestamp: DateTime::from_str("1996-07-04 12:00:00Z").expect("Could not parse date"),
+            start: Some(DateTime::from_str("1996-09-18 14:30:00Z").expect("Could not parse date")),
+            end: Some(DateTime::from_str("1996-09-20 22:00:00Z").expect("Could not parse date")),
             status: Some(EventStatus::Confirmed),
             catagory: Some("CONFERENCE".into()),
             organizer: Some("mailto:jsmith@example.com".into()),
@@ -162,8 +164,9 @@ mod test {
     #[test]
     fn serialize_minimal_event() {
         let event = Event {
-            uid: Uuid::from_str("014145f2-adf7-49c4-bd42-bf34074f596d").unwrap(),
-            timestamp: DateTime::from_timestamp_secs(836553600).unwrap(),
+            uid: Uuid::from_str("014145f2-adf7-49c4-bd42-bf34074f596d")
+                .expect("Could not parse UUIDv4"),
+            timestamp: DateTime::from_str("1996-07-05 08:00:00Z").expect("Could not parse date"),
             ..Default::default()
         };
 

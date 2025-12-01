@@ -50,9 +50,9 @@ impl Display for Alarm {
         match &self {
             Self::Audio(alarm) => {
                 write!(f, "TRIGGER:{}\r\n", alarm.trigger.to_icalendar_timestamp())?;
-                if_some_write_param(f, "ATTACH", &alarm.attach)?;
-                if_some_write(f, "REPEAT", &alarm.repeat)?;
-                if_some_write(f, "DURATION", &alarm.duration)?;
+                if_some_write_param(f, "ATTACH", alarm.attach.clone())?;
+                if_some_write(f, "REPEAT", alarm.repeat)?;
+                if_some_write(f, "DURATION", alarm.duration.clone())?;
             }
             Self::Display(alarm) => {
                 write!(f, "TRIGGER:{}\r\n", alarm.trigger.to_icalendar_timestamp())?;

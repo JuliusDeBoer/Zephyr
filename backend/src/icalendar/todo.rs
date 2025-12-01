@@ -9,6 +9,7 @@ use crate::icalendar::{
     parameter::IcalParam,
 };
 
+#[derive(Clone)]
 pub enum TodoStatus {
     NeedsAction,
     Accepted,
@@ -86,12 +87,12 @@ impl Display for Todo {
             .as_str(),
         )?;
 
-        if_some_write(f, "SEQUENCE", &self.seq)?;
-        if_some_write(f, "ORGANIZER", &self.organizer)?;
-        if_some_write_param(f, "ATTENDEE", &self.atendee)?;
-        if_some_write_date(f, "DUE", &self.due)?;
-        if_some_write(f, "STATUS", &self.status)?;
-        if_some_write(f, "SUMMARY", &self.summary)?;
+        if_some_write(f, "SEQUENCE", self.seq)?;
+        if_some_write(f, "ORGANIZER", self.organizer.clone())?;
+        if_some_write_param(f, "ATTENDEE", self.atendee.clone())?;
+        if_some_write_date(f, "DUE", self.due)?;
+        if_some_write(f, "STATUS", self.status.clone())?;
+        if_some_write(f, "SUMMARY", self.summary.clone())?;
         if let Some(alarm) = &self.alarm {
             write!(f, "{alarm}\r\n")?;
         }
@@ -140,9 +141,10 @@ mod test {
     #[test]
     fn serialize_todo_with_alarm() {
         let todo = Todo {
-            uid: Uuid::from_str("3e5b9fe5-8c0f-46ff-930f-7b4f2afb0b38").unwrap(),
-            timestamp: DateTime::from_timestamp_secs(886167900).unwrap(),
-            due: Some(DateTime::from_timestamp_secs(892598400).unwrap()),
+            uid: Uuid::from_str("3e5b9fe5-8c0f-46ff-930f-7b4f2afb0b38")
+                .expect("Could not parse UUIDv4"),
+            timestamp: DateTime::from_str("1998-01-30 13:45:00Z").expect("Could not parse date"),
+            due: Some(DateTime::from_str("1998-04-15 00:00:00Z").expect("Could not parse date")),
             seq: Some(2),
             organizer: Some("mailto:unclesam@example.com".into()),
             status: Some(TodoStatus::NeedsAction),
@@ -153,7 +155,7 @@ mod test {
             }),
             summary: Some("Submit Income Taxes".into()),
             alarm: Some(Alarm::Audio(AudioAlarm {
-                trigger: DateTime::from_timestamp_secs(891604800).unwrap(),
+                trigger: DateTime::from_str("1998-04-03 12:00:00Z").expect("Could not parse date"),
                 duration: Some("PT1H".into()),
                 repeat: Some(4),
                 attach: Some(IcalParam {
@@ -189,8 +191,9 @@ mod test {
     #[test]
     fn serialize_minimal_todo() {
         let todo = Todo {
-            uid: Uuid::from_str("8aa4dcb5-c32f-4e87-8ea8-2b89138df501").unwrap(),
-            timestamp: DateTime::from_timestamp_secs(886175100).unwrap(),
+            uid: Uuid::from_str("8aa4dcb5-c32f-4e87-8ea8-2b89138df501")
+                .expect("Could not parse date"),
+            timestamp: DateTime::from_str("1998-01-30 15:45:00Z").expect("Could not parse date"),
             ..Default::default()
         };
 

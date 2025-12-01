@@ -3,7 +3,7 @@ use eyre::{Context, Result};
 use rand::{Rng, distr::Alphanumeric, rng};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
-    entity::{PartialModelTrait, ActiveModelBehavior, ActiveModelTrait, Set},
+    entity::{ActiveModelTrait, Set},
 };
 
 use crate::entity::instance_setting;
@@ -30,7 +30,7 @@ pub async fn validate_credentials(
     match user_result {
         None => Ok(false),
         Some(user) => {
-            let parsed_hash = PasswordHash::new(&user.password).unwrap();
+            let parsed_hash = PasswordHash::new(&user.password)?;
             let valid = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
             Ok(valid.is_ok())
         }

@@ -10,7 +10,7 @@ members = [".", "migration"]
 pedantic = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
 future-not-send = "allow"
-unwrap_used = "warn"
+unwrap_used = "deny"
 
 [dependencies]
 actix-web = "4.11.0"

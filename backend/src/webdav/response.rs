@@ -1,7 +1,6 @@
 use actix_web::http::StatusCode;
 use chrono::{DateTime, Local, Utc};
 use eyre::Result;
-use serde::Serialize;
 
 use super::xml::{SerializeXml, WEBDAV_NAMESPACES, XmlWriter};
 

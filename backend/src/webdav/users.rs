@@ -23,6 +23,7 @@ use crate::{
     webdav::response::{MultiStatusResponse, PropStat, Response},
 };
 
+#[allow(clippy::manual_let_else)]
 async fn handle_propfind(
     req: HttpRequest,
     db: web::Data<Arc<DatabaseConnection>>,
@@ -55,9 +56,8 @@ async fn handle_propfind(
         None => return Err(status_error(StatusCode::FORBIDDEN)),
     };
 
-    let mut calendars;
-    if depth >= 1 {
-        calendars = User::find()
+    let mut calendars = if depth >= 1 {
+        User::find()
             .filter(user::Column::Id.eq(user_claims.user_id))
             .find_with_related(crate::entity::calendar::Entity)
             .all(db)
@@ -71,10 +71,10 @@ async fn handle_propfind(
                     description: String::new(),
                 }),
             })
-            .collect();
+            .collect()
     } else {
-        calendars = vec![];
-    }
+        vec![]
+    };
 
     let mut properties = vec![PropStat {
         status_code: StatusCode::OK,
@@ -97,7 +97,7 @@ async fn handle_propfind(
     };
 
     let mut writer = XmlWriter::new();
-    body.write_xml(&mut writer).unwrap();
+    body.write_xml(&mut writer)?;
     Ok(HttpResponse::MultiStatus()
         .append_header(("Content-Type", "application/xml"))
         .body(writer.into_bytes()))
@@ -107,7 +107,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route(
         "users/{user_id}",
         web::route()
-            .method(Method::from_str("PROPFIND").unwrap())
+            .method(Method::from_str("PROPFIND").expect("Could not create PROPFIND method"))
             .to(handle_propfind),
     );
 }

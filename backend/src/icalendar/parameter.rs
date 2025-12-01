@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
 
+#[derive(Clone)]
 pub enum PartStat {
     // For both events and todos
     NeedsAction,
@@ -32,6 +33,7 @@ impl Display for PartStat {
 }
 
 // NOTE(Julius): It might be a better idea to keep an array for this.
+#[derive(Clone)]
 pub struct IcalParam<T> {
     /// Alternate text representation
     pub alt_rep: Option<String>,
@@ -80,26 +82,26 @@ pub struct IcalParam<T> {
 impl<T> IcalParam<T> {
     pub fn new(value: T) -> Self {
         Self {
-            alt_rep: Default::default(),
-            cn: Default::default(),
-            cut_ype: Default::default(),
-            del_from: Default::default(),
-            del_to: Default::default(),
-            dir: Default::default(),
-            encoding: Default::default(),
-            fmt_type: Default::default(),
-            fb_type: Default::default(),
-            language: Default::default(),
-            member: Default::default(),
-            part_stat: Default::default(),
-            range: Default::default(),
-            trig_rel: Default::default(),
-            rel_type: Default::default(),
-            role: Default::default(),
-            rsvp: Default::default(),
-            sent_by: Default::default(),
-            tz_id: Default::default(),
-            value_type: Default::default(),
+            alt_rep: Option::default(),
+            cn: Option::default(),
+            cut_ype: Option::default(),
+            del_from: Option::default(),
+            del_to: Option::default(),
+            dir: Option::default(),
+            encoding: Option::default(),
+            fmt_type: Option::default(),
+            fb_type: Option::default(),
+            language: Option::default(),
+            member: Option::default(),
+            part_stat: Option::default(),
+            range: Option::default(),
+            trig_rel: Option::default(),
+            rel_type: Option::default(),
+            role: Option::default(),
+            rsvp: Option::default(),
+            sent_by: Option::default(),
+            tz_id: Option::default(),
+            value_type: Option::default(),
             value,
         }
     }
@@ -108,26 +110,26 @@ impl<T> IcalParam<T> {
 impl<T: Default> Default for IcalParam<T> {
     fn default() -> Self {
         Self {
-            alt_rep: Default::default(),
-            cn: Default::default(),
-            cut_ype: Default::default(),
-            del_from: Default::default(),
-            del_to: Default::default(),
-            dir: Default::default(),
-            encoding: Default::default(),
-            fmt_type: Default::default(),
-            fb_type: Default::default(),
-            language: Default::default(),
-            member: Default::default(),
-            part_stat: Default::default(),
-            range: Default::default(),
-            trig_rel: Default::default(),
-            rel_type: Default::default(),
-            role: Default::default(),
-            rsvp: Default::default(),
-            sent_by: Default::default(),
-            tz_id: Default::default(),
-            value_type: Default::default(),
+            alt_rep: Option::default(),
+            cn: Option::default(),
+            cut_ype: Option::default(),
+            del_from: Option::default(),
+            del_to: Option::default(),
+            dir: Option::default(),
+            encoding: Option::default(),
+            fmt_type: Option::default(),
+            fb_type: Option::default(),
+            language: Option::default(),
+            member: Option::default(),
+            part_stat: Option::default(),
+            range: Option::default(),
+            trig_rel: Option::default(),
+            rel_type: Option::default(),
+            role: Option::default(),
+            rsvp: Option::default(),
+            sent_by: Option::default(),
+            tz_id: Option::default(),
+            value_type: Option::default(),
             value: Default::default(),
         }
     }

@@ -64,7 +64,7 @@ fn wrap_icalendar_line(s: &str, width: usize) -> String {
 pub fn if_some_write(
     f: &mut Formatter<'_>,
     name: &'static str,
-    val: &Option<impl Display>,
+    val: Option<impl Display>,
 ) -> fmt::Result {
     if let Some(val) = val {
         let line = format!("{name}:{val}");
@@ -79,7 +79,7 @@ pub fn if_some_write(
 pub fn if_some_write_param<T: Display>(
     f: &mut Formatter<'_>,
     name: &'static str,
-    val: &Option<IcalParam<T>>,
+    val: Option<IcalParam<T>>,
 ) -> fmt::Result {
     if let Some(val) = val {
         let line = format!("{name}{val}");
@@ -92,7 +92,7 @@ pub fn if_some_write_param<T: Display>(
 fn if_some_write_date(
     f: &mut Formatter<'_>,
     name: &'static str,
-    val: &Option<impl ToIcalendarTimeStamp>,
+    val: Option<impl ToIcalendarTimeStamp>,
 ) -> fmt::Result {
     if let Some(val) = val {
         let line = format!("{}:{}", name, val.to_icalendar_timestamp());

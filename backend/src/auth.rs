@@ -8,7 +8,7 @@ use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use sea_orm::{
     ColumnTrait, DatabaseConnection, QueryFilter,
-    entity::{ActiveEnum, ActiveModelBehavior, ActiveModelTrait, EntityTrait, Related, Set},
+    entity::{ActiveModelTrait, EntityTrait, Set},
 };
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;

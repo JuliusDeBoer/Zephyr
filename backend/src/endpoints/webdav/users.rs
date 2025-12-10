@@ -10,23 +10,23 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use uuid::Uuid;
 
 use crate::{
-    entity::prelude::User,
-    util::WithStatusCode,
-    webdav::{
-        response::{Property, UserProperty},
-        xml::XmlWriter,
+    endpoints::webdav::middleware::UserClaims,
+    entity::{prelude::User, user},
+    logic::{
+        error::{ApiError, WithStatusCode},
+        response::{
+            CalendarProperty, MultiStatusResponse, NameOnlyProperty, PropStat, Property,
+            ResourceType, Response,
+        },
     },
-};
-use crate::{entity::user, webdav::xml::SerializeXml};
-use crate::{
-    util::ApiError,
-    webdav::response::{MultiStatusResponse, PropStat, Response},
+    serialization::xml::{SerializeXml, XmlWriter},
 };
 
 #[allow(clippy::manual_let_else)]
 async fn handle_propfind(
     req: HttpRequest,
     db: web::Data<Arc<DatabaseConnection>>,
+    user_claims: web::ReqData<UserClaims>,
 ) -> Result<HttpResponse, ApiError> {
     let db = db.as_ref().as_ref();
 
@@ -55,6 +55,36 @@ async fn handle_propfind(
         }
     };
 
+    let mut calendars = if depth >= 1 {
+        User::find()
+            .filter(user::Column::Id.eq(user_claims.user_id))
+            .find_with_related(crate::entity::calendar::Entity)
+            .all(db)
+            .await?[0]
+            .1
+            .iter()
+            .map(|v| PropStat {
+                status_code: StatusCode::OK,
+                prop: Property::Calendar(CalendarProperty {
+                    display_name: v.title.clone(),
+                    description: String::new(),
+                }),
+            })
+            .collect()
+    } else {
+        vec![]
+    };
+
+    let mut properties = vec![PropStat {
+        status_code: StatusCode::OK,
+        prop: Property::NameOnly(NameOnlyProperty {
+            display_name: user.display_name,
+            resource_type: ResourceType::Collection,
+        }),
+    }];
+
+    properties.append(&mut calendars);
+
     let body = match depth {
         i32::MIN..0 => {
             return Err(ApiError::new(
@@ -65,15 +95,7 @@ async fn handle_propfind(
         0..=i32::MAX => MultiStatusResponse {
             responses: vec![Response {
                 href: "/caldav/".into(),
-                properties: vec![PropStat {
-                    status_code: StatusCode::OK,
-                    prop: Property::User(UserProperty {
-                        display_name: user.display_name,
-                        calendar_home_set: format!("/caldav/users/{}", user.id),
-                        principal: format!("/caldav/principals/users/{}", user.id),
-                        current_user_principal: format!("/caldav/principals/users/{}", user.id),
-                    }),
-                }],
+                properties,
             }],
         },
     };
@@ -87,7 +109,7 @@ async fn handle_propfind(
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route(
-        "principals/users/{user_id}",
+        "users/{user_id}",
         web::route()
             .method(Method::from_str("PROPFIND").expect("Could not create PROPFIND method"))
             .to(handle_propfind),

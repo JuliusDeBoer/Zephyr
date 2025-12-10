@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
 
-use crate::icalendar::{
+use crate::serialization::icalendar::{
     ToIcalendarTimeStamp, if_some_write, if_some_write_param, parameter::IcalParam,
 };
 

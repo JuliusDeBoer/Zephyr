@@ -19,8 +19,8 @@ use uuid::Uuid;
 use crate::entity::calendar;
 use crate::entity::prelude::User;
 use crate::entity::user;
-use crate::jwt::{get_jwt_signing_key, validate_credentials};
-use crate::util::ApiError;
+use crate::logic::error::ApiError;
+use crate::logic::jwt::{get_jwt_signing_key, validate_credentials};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]

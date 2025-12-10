@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use crate::entity::prelude::User;
 use crate::entity::user;
-use crate::jwt::validate_credentials;
+use crate::logic::jwt::validate_credentials;
 
 #[derive(Clone, Debug)]
 pub struct UserClaims {

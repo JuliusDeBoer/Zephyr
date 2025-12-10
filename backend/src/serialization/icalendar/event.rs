@@ -1,4 +1,4 @@
-use crate::icalendar::{ToIcalendarTimeStamp, if_some_write};
+use crate::serialization::icalendar::{ToIcalendarTimeStamp, if_some_write};
 use chrono::{DateTime, Utc};
 use hyper::body::{Body, Frame};
 use std::fmt;

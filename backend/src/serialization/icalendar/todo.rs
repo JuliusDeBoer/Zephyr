@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use std::default::Default;
 use uuid::Uuid;
 
-use crate::icalendar::{
+use crate::serialization::icalendar::{
     ToIcalendarTimeStamp, alarm::Alarm, if_some_write, if_some_write_date, if_some_write_param,
     parameter::IcalParam,
 };
@@ -133,7 +133,7 @@ impl Default for Todo {
 mod test {
     use std::str::FromStr;
 
-    use crate::icalendar::{alarm::AudioAlarm, parameter::PartStat};
+    use crate::serialization::icalendar::{alarm::AudioAlarm, parameter::PartStat};
 
     use super::*;
     use pretty_assertions::assert_eq;

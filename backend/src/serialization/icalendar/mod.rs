@@ -2,7 +2,7 @@ use std::fmt::{self, Display, Formatter};
 
 use chrono::DateTime;
 
-use crate::icalendar::parameter::IcalParam;
+use crate::serialization::icalendar::parameter::IcalParam;
 
 mod alarm;
 mod event;

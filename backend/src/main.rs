@@ -5,14 +5,15 @@ use dotenvy::dotenv;
 use env_logger::Env;
 use sea_orm::Database;
 
-use crate::webdav::{caldav, middleware::CalDavAuth};
+use crate::endpoints::{
+    auth,
+    webdav::{caldav, middleware::CalDavAuth},
+};
 
-mod auth;
+mod endpoints;
 mod entity;
-mod icalendar;
-mod jwt;
-mod util;
-mod webdav;
+mod logic;
+mod serialization;
 
 fn get_db_string() -> String {
     dotenv().ok();

@@ -9,17 +9,13 @@ use chrono::DateTime;
 use std::str::FromStr;
 
 use crate::{
-    util::ApiError,
-    webdav::{
-        middleware::UserClaims,
-        principals,
-        response::{
-            MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty,
-            WebDavPermissions,
-        },
-        users,
-        xml::{SerializeXml, XmlWriter},
+    endpoints::webdav::{middleware::UserClaims, principals, users},
+    logic::error::ApiError,
+    logic::response::{
+        MultiStatusResponse, PropStat, Property, ResourceType, Response, RootProperty,
+        WebDavPermissions,
     },
+    serialization::xml::{SerializeXml, XmlWriter},
 };
 
 #[options("")]

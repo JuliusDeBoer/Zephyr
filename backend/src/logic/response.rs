@@ -2,7 +2,7 @@ use actix_web::http::StatusCode;
 use chrono::{DateTime, Local, Utc};
 use rootcause::Report;
 
-use super::xml::{SerializeXml, WEBDAV_NAMESPACES, XmlWriter};
+use crate::serialization::xml::{SerializeXml, WEBDAV_NAMESPACES, XmlWriter};
 
 #[derive(Debug)]
 pub struct MultiStatusResponse {

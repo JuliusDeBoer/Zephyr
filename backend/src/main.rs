@@ -5,11 +5,10 @@ use dotenvy::dotenv;
 use env_logger::Env;
 use sea_orm::Database;
 
-use crate::endpoints::{
-    auth,
-    webdav::{caldav, middleware::CalDavAuth},
-};
+use crate::endpoints::rest::auth;
+use crate::endpoints::webdav::{caldav, middleware::CalDavAuth};
 
+mod controller;
 mod endpoints;
 mod entity;
 mod logic;

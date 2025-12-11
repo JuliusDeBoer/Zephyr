@@ -1,8 +1,16 @@
+//! Generic error handeling for Actix endpoints
+//!
+//! The [`ApiError`] is an error type that can be transformed into a response
+//! through Actix. Plus it provides the [`WithStatusCode`] trait. Allowing for
+//! adding a custom status code to the error.
+
 use std::fmt::Display;
 
 use actix_web::{HttpResponse, ResponseError, body::BoxBody, http::StatusCode};
 use rootcause::{Report, report};
 
+/// An error that contains a [`Report`] and a [`StatusCode`]. Allowing for
+/// easily returning an error to the top-level endpoint error.
 #[derive(Debug)]
 pub struct ApiError {
     pub report: Report,

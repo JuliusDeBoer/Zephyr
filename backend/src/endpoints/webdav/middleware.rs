@@ -18,9 +18,9 @@ use std::{
 };
 use uuid::Uuid;
 
+use crate::controller::jwt::validate_credentials;
 use crate::entity::prelude::User;
 use crate::entity::user;
-use crate::logic::jwt::validate_credentials;
 
 #[derive(Clone, Debug)]
 pub struct UserClaims {

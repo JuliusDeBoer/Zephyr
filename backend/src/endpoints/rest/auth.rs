@@ -16,11 +16,11 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;
 
+use crate::controller::jwt::{get_jwt_signing_key, validate_credentials};
 use crate::entity::calendar;
 use crate::entity::prelude::User;
 use crate::entity::user;
 use crate::logic::error::ApiError;
-use crate::logic::jwt::{get_jwt_signing_key, validate_credentials};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]

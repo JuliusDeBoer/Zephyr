@@ -98,7 +98,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod test {
-    use crate::webdav::{response::Property, xml::XmlWriter};
+    use crate::logic::response::Property;
+    use crate::serialization::xml::XmlWriter;
 
     use actix_web::http::StatusCode;
     use chrono::DateTime;

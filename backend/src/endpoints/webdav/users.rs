@@ -10,6 +10,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use uuid::Uuid;
 
 use crate::{
+    controller::users::get_user_by_id,
     endpoints::webdav::middleware::UserClaims,
     entity::{prelude::User, user},
     logic::{
@@ -38,9 +39,7 @@ async fn handle_propfind(
 
     let user_id = Uuid::from_str(user_id).with_status(StatusCode::BAD_REQUEST)?;
 
-    let user = User::find()
-        .filter(user::Column::Id.eq(user_id))
-        .one(db)
+    let user = get_user_by_id(db, user_id)
         .await?
         .ok_or_else(|| report!("Could not find user"))
         .with_status(StatusCode::NOT_FOUND)?;

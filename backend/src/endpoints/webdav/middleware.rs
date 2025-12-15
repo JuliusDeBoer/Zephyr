@@ -8,9 +8,7 @@ use actix_web::{
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
 use futures_util::future::LocalBoxFuture;
-use sea_orm::{
-    ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
-};
+use sea_orm::DatabaseConnection;
 use std::{
     future::{Ready, ready},
     rc::Rc,
@@ -19,18 +17,11 @@ use std::{
 use uuid::Uuid;
 
 use crate::controller::jwt::validate_credentials;
-use crate::entity::prelude::User;
-use crate::entity::user;
+use crate::controller::users::get_user_by_email;
 
 #[derive(Clone, Debug)]
 pub struct UserClaims {
     pub user_id: Uuid,
-}
-
-#[derive(DerivePartialModel, FromQueryResult)]
-#[sea_orm(entity = "user::Entity")]
-struct IdOnly {
-    id: Uuid,
 }
 
 #[derive(Default)]
@@ -129,10 +120,7 @@ where
             let db_ref = db.as_ref().as_ref();
             if let Ok(valid) = validate_credentials(&email, &password, db_ref).await {
                 if valid {
-                    let user_result: Option<IdOnly> = User::find()
-                        .filter(user::Column::Email.eq(email))
-                        .into_partial_model()
-                        .one(db_ref)
+                    let user_result = get_user_by_email(&db, email)
                         .await
                         .expect("Unexpected Database Error");
 

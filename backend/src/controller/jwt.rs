@@ -6,28 +6,15 @@ use sea_orm::{
     entity::{ActiveModelTrait, Set},
 };
 
-use crate::entity::instance_setting;
-use crate::entity::prelude::{InstanceSetting, User};
-use crate::entity::user;
-
-#[derive(DerivePartialModel, FromQueryResult)]
-#[sea_orm(entity = "user::Entity")]
-struct PasswordOnly {
-    password: String,
-}
+use crate::entity::prelude::InstanceSetting;
+use crate::{controller::users::get_user_by_email, entity::instance_setting};
 
 pub async fn validate_credentials(
-    email: &String,
+    email: &str,
     password: &String,
     db: &DatabaseConnection,
 ) -> Result<bool, Report> {
-    let user_result: Option<PasswordOnly> = User::find()
-        .filter(user::Column::Email.eq(email))
-        .into_partial_model()
-        .one(db)
-        .await?;
-
-    match user_result {
+    match get_user_by_email(db, email.to_string()).await? {
         None => Ok(false),
         Some(user) => {
             let parsed_hash = PasswordHash::new(&user.password)?;

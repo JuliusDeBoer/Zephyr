@@ -6,19 +6,19 @@ use actix_web::{
     web,
 };
 use rootcause::report;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::DatabaseConnection;
 use uuid::Uuid;
 
 use crate::{
-    entity::prelude::User,
-    logic::error::WithStatusCode,
-    logic::response::{Property, UserProperty},
-    serialization::xml::XmlWriter,
-};
-use crate::{entity::user, serialization::xml::SerializeXml};
-use crate::{
+    controller::users::get_user_by_id,
     logic::error::ApiError,
     logic::response::{MultiStatusResponse, PropStat, Response},
+    logic::{
+        error::WithStatusCode,
+        response::{Property, UserProperty},
+    },
+    serialization::xml::SerializeXml,
+    serialization::xml::XmlWriter,
 };
 
 #[allow(clippy::manual_let_else)]
@@ -36,9 +36,7 @@ async fn handle_propfind(
 
     let user_id = Uuid::from_str(user_id).with_status(StatusCode::BAD_REQUEST)?;
 
-    let user = User::find()
-        .filter(user::Column::Id.eq(user_id))
-        .one(db)
+    let user = get_user_by_id(db, user_id)
         .await?
         .ok_or_else(|| report!("Could not find user"))
         .with_status(StatusCode::NOT_FOUND)?;

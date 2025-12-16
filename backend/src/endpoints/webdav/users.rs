@@ -67,6 +67,7 @@ async fn handle_propfind(
                 prop: Property::Calendar(CalendarProperty {
                     display_name: v.title.clone(),
                     description: String::new(),
+                    ctag: v.c_tag.to_string(),
                 }),
             })
             .collect()

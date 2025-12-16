@@ -8,6 +8,7 @@ use rootcause::Report;
 pub static WEBDAV_NAMESPACES: &[(&str, &str)] = &[
     ("xmlns:d", "DAV:"),
     ("xmlns:cal", "urn:ietf:params:xml:ns:caldav"),
+    ("xmlns:cs", "http://calendarserver.org/ns/"),
 ];
 
 pub trait SerializeXml {

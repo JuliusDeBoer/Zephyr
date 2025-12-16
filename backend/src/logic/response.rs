@@ -80,6 +80,7 @@ pub struct NameOnlyProperty {
 pub struct CalendarProperty {
     pub display_name: String,
     pub description: String,
+    pub ctag: String,
 }
 
 #[derive(Debug)]
@@ -158,6 +159,10 @@ impl SerializeXml for CalendarProperty {
         writer.start_element("cal:supported-calendar-component-set")?;
         writer.empty_element_with_attrs("cal:comp", &[("name", "VEVENT")])?;
         writer.end_element("cal:supported-calendar-component-set")?;
+
+        writer.start_element("cs:getctag")?;
+        writer.add_text(&self.ctag)?;
+        writer.end_element("cs:getctag")?;
         writer.end_element("d:prop")?;
         Ok(())
     }
@@ -233,6 +238,12 @@ impl SerializeXml for RootProperty {
         writer.end_element("d:href")?;
         writer.end_element("d:current-user-principal")?;
         self.permissions.write_xml(writer)?;
+        writer.start_element("cal:supported-calendar-component-set")?;
+        writer.empty_element_with_attrs("cal:comp", &[("name", "VEVENT")])?;
+        writer.end_element("cal:supported-calendar-component-set")?;
+        writer.start_element("cs:getctag")?;
+        writer.add_text(&self.ctag)?;
+        writer.end_element("cs:getctag")?;
         writer.end_element("d:prop")?;
         Ok(())
     }

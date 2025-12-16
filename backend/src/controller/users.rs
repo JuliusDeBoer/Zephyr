@@ -1,4 +1,7 @@
-use crate::entity::{calendar, user};
+use crate::{
+    controller::calendars::{CalendarData, create_calendar_for_user},
+    entity::user,
+};
 use argon2::{
     Argon2, PasswordHasher,
     password_hash::{SaltString, rand_core::OsRng},
@@ -67,19 +70,20 @@ pub async fn create_user_with_calendar(
         first_name: Set(data.first_name.clone()),
         last_name: Set(data.last_name.clone()),
         affix: Set(data.affix.clone()),
-        display_name: Set(data.display_name),
-    };
-
-    let calendar = calendar::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        title: Set(format!("{}'s calendar", data.first_name)),
-        colour: Set("#63a6d7".into()),
-        owner: Set(user_id),
-        ..Default::default()
+        display_name: Set(data.display_name.clone()),
     };
 
     user.insert(db).await?;
-    calendar.insert(db).await?;
+
+    create_calendar_for_user(
+        db,
+        user_id,
+        CalendarData {
+            title: format!("{}'s calendar", data.display_name),
+            colour: "#63a6d7".into(),
+        },
+    )
+    .await?;
 
     Ok(())
 }

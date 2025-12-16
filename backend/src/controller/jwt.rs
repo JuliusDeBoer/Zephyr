@@ -2,7 +2,7 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use rand::{Rng, distr::Alphanumeric, rng};
 use rootcause::{Report, prelude::ResultExt};
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, DerivePartialModel, EntityTrait, FromQueryResult, QueryFilter,
+    ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
     entity::{ActiveModelTrait, Set},
 };
 

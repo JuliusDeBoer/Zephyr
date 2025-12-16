@@ -7,6 +7,7 @@ use actix_web::{
 };
 use chrono::DateTime;
 use std::str::FromStr;
+use uuid::Uuid;
 
 use crate::{
     endpoints::webdav::{middleware::UserClaims, principals, users},
@@ -56,7 +57,7 @@ async fn handle_propfind(
                 properties: vec![PropStat {
                     status_code: StatusCode::OK,
                     prop: Property::Root(RootProperty {
-                        resource_type: ResourceType::Collection,
+                        resource_type: ResourceType::Calendar,
                         display_name: "CalDAV".into(),
                         created_at: DateTime::from_str("2025-11-02 14:30:00Z")?,
                         last_modified: DateTime::from_str("2025-11-01 10:00:00Z")?,
@@ -70,7 +71,8 @@ async fn handle_propfind(
                             write: true,
                             write_content: true,
                         },
-                        ctag: "AAA".into(),
+                        // TODO(Julius): Fix this
+                        ctag: Uuid::new_v4().to_string(),
                     }),
                 }],
             }],
@@ -110,7 +112,7 @@ mod test {
     #[test]
     fn serialize_mutli_status_response() {
         let expected = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\">
+<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\" xmlns:cs=\"http://calendarserver.org/ns/\">
     <d:response>
         <d:href>/caldav/</d:href>
         <d:propstat>
@@ -135,6 +137,10 @@ mod test {
                         <d:write-content/>
                     </d:privilege>
                 </d:current-user-privilege-set>
+                <cal:supported-calendar-component-set>
+                    <cal:comp name=\"VEVENT\"/>
+                </cal:supported-calendar-component-set>
+                <cs:getctag>AAA</cs:getctag>
             </d:prop>
             <d:status>HTTP/1.1 200 OK</d:status>
         </d:propstat>
